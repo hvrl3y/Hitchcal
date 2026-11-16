@@ -1,0 +1,125 @@
+<div class="app" id="app">
+  <div class="views">
+
+    <section class="view" id="v-today" aria-label="Today">
+      <div class="scroll">
+        <header class="navbar"><div class="navbar-in wrap">
+          <span class="nav-sp"></span><span class="nav-title">Today</span>
+          <button class="avatar" id="today-avatar" data-act="edit-hitch" aria-label="Edit my hitch"></button>
+        </div></header>
+        <div class="wrap" id="today-body"></div>
+      </div>
+    </section>
+
+    <section class="view" id="v-cal" aria-label="Calendar">
+      <div class="wrap cal-wrap">
+        <div class="cal-top">
+          <h1 class="cal-title" id="cal-title"></h1>
+          <div class="cal-ctl">
+            <button class="icon-btn" id="cal-prev" data-act="cal-prev" aria-label="Previous"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+            <button class="icon-btn" id="cal-next" data-act="cal-next" aria-label="Next"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
+            <button class="pill-btn" data-act="cal-today">Today</button>
+          </div>
+        </div>
+        <div class="seg" id="cal-seg" data-change="cal-mode" role="tablist">
+          <button data-act="seg" data-val="month" class="on">Month</button>
+          <button data-act="seg" data-val="year">Year</button>
+          <button data-act="seg" data-val="list">List</button>
+        </div>
+        <button class="strip" id="cal-strip" data-act="tab" data-tab="today"></button>
+        <div class="dow" id="cal-dow"><span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span></div>
+        <div class="cal-main" id="cal-main"></div>
+      </div>
+    </section>
+
+    <section class="view" id="v-pay" aria-label="Pay">
+      <div class="scroll">
+        <header class="navbar"><div class="navbar-in wrap">
+          <span class="nav-sp"></span><span class="nav-title">Pay</span>
+          <button class="txt-btn strong" data-act="pay-edit">Edit rates</button>
+        </div></header>
+        <div class="wrap" id="pay-body"></div>
+      </div>
+    </section>
+
+    <section class="view" id="v-crew" aria-label="Crew">
+      <div class="scroll">
+        <header class="navbar"><div class="navbar-in wrap">
+          <span class="nav-sp"></span><span class="nav-title">Crew</span>
+          <button class="icon-btn" data-act="crew-add" aria-label="Add a schedule"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+        </div></header>
+        <div class="wrap" id="crew-body"></div>
+      </div>
+    </section>
+
+    <section class="view" id="v-more" aria-label="More">
+      <div class="scroll">
+        <header class="navbar"><div class="navbar-in wrap">
+          <span class="nav-sp"></span><span class="nav-title">More</span><span class="nav-sp"></span>
+        </div></header>
+        <div class="wrap" id="more-body"></div>
+      </div>
+    </section>
+
+    <section class="page" id="page-certs" aria-label="Certifications">
+      <div class="scroll">
+        <header class="navbar"><div class="navbar-in wrap">
+          <button class="back-btn" data-act="page-back"><svg viewBox="0 0 12 20" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2L2 10l8 8"/></svg>More</button>
+          <span class="nav-title">Certifications</span>
+          <button class="icon-btn" data-act="cert-add" aria-label="Add a certification"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+        </div></header>
+        <div class="wrap"><h1 class="lt">Certifications</h1><div id="certs-body"></div></div>
+      </div>
+    </section>
+  </div>
+
+  <nav class="tabbar" id="tabbar" aria-label="Sections">
+    <div class="brand"><svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="15" fill="var(--tint)"/><rect x="13" y="17" width="38" height="34" rx="7" fill="var(--on-tint)"/><rect x="19" y="29" width="26" height="7" rx="3.5" fill="var(--tint)"/><rect x="19" y="40" width="12" height="5" rx="2.5" fill="var(--tint)" opacity=".55"/><rect x="22" y="11" width="5" height="11" rx="2.5" fill="var(--on-tint)"/><rect x="37" y="11" width="5" height="11" rx="2.5" fill="var(--on-tint)"/></svg>HitchCal</div>
+    <button class="tab" data-act="tab" data-tab="today"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.5" r="7.5"/><path d="M12 9.5v4l2.6 2.4M9.5 3h5"/></svg>Today</button>
+    <button class="tab" data-act="tab" data-tab="cal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="3.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>Calendar</button>
+    <button class="tab" data-act="tab" data-tab="pay"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M14.9 9.3c-.5-1-1.5-1.6-2.9-1.6-1.7 0-2.9.9-2.9 2.2 0 3 6 1.4 6 4.3 0 1.3-1.3 2.2-3.1 2.2-1.5 0-2.6-.6-3.1-1.7M12 5.9v1.8M12 16.4v1.7"/></svg>Pay</button>
+    <button class="tab" data-act="tab" data-tab="crew"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8.5" r="3.3"/><path d="M2.8 19.2c.5-3.2 3-5 6.2-5s5.7 1.8 6.2 5M16 5.5a3.2 3.2 0 0 1 0 6M18.2 14.6c1.7.7 2.8 2.3 3.1 4.6"/></svg>Crew</button>
+    <button class="tab" data-act="tab" data-tab="more"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="7.8" cy="12" r="1.15" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.15" fill="currentColor" stroke="none"/><circle cx="16.2" cy="12" r="1.15" fill="currentColor" stroke="none"/></svg>More</button>
+  </nav>
+
+  <div class="sheet-wrap" id="sheet" hidden>
+    <div class="backdrop" data-act="sheet-close"></div>
+    <div class="sheet" id="sheet-card" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+      <div class="grab" id="sheet-grab"></div>
+      <div class="sheet-head">
+        <button class="txt-btn" id="sheet-left" data-act="sheet-close">Cancel</button>
+        <div class="sheet-title" id="sheet-title"></div>
+        <button class="txt-btn strong" id="sheet-right" data-act="sheet-primary">Save</button>
+      </div>
+      <div class="sheet-body" id="sheet-body"></div>
+    </div>
+  </div>
+
+  <div class="alert-wrap" id="alert" hidden>
+    <div class="backdrop" data-act="alert-cancel"></div>
+    <div class="asheet" role="alertdialog" aria-modal="true">
+      <div class="as-box">
+        <div class="as-msg"><b id="alert-title"></b><span id="alert-msg"></span></div>
+        <button class="as-btn" id="alert-ok" data-act="alert-ok"></button>
+      </div>
+      <button class="as-btn cancel" data-act="alert-cancel">Cancel</button>
+    </div>
+  </div>
+
+  <div class="onboard" id="onboard" hidden>
+    <div class="wrap ob-top">
+      <button class="txt-btn" id="ob-back" data-act="ob-back">Back</button>
+      <div class="dots" id="ob-dots"><i></i><i></i><i></i></div>
+      <span class="txt-btn" aria-hidden="true"></span>
+    </div>
+    <div class="ob-body"><div class="wrap" id="ob-steps"></div></div>
+    <div class="wrap ob-foot">
+      <button class="btn primary" id="ob-next" data-act="ob-next">Get started</button>
+      <button class="btn plain" id="ob-demo" data-act="ob-demo">Explore a sample schedule</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <input type="file" id="restore-file" accept="application/json,.json" hidden>
+  <input type="file" id="photo-file" accept="image/*" hidden>
+</div>
