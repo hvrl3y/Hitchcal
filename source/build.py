@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Assemble HitchCal from source/src into the site files at the repository root. Run: python3 source/build.py (needs Pillow)."""
-import json, pathlib
+import base64, json, pathlib
 from PIL import Image, ImageDraw
 
 ROOT = pathlib.Path(__file__).parent
@@ -28,14 +28,17 @@ def holiday_svg():
 def build():
     css = (SRC / 'styles.css').read_text().replace('__DARK__', DARK)
     body = (SRC / 'body.html').read_text()
+    avatars = sorted((SRC / 'avatars').glob('*.webp'))
     js = (SRC / 'app.js').read_text().replace('/*__HOLIDAY_SVG__*/', holiday_svg())
+    av_inline = 'const AVIMG = ' + json.dumps({a.stem: 'data:image/webp;base64,' + base64.b64encode(a.read_bytes()).decode() for a in avatars}) + ';'
+    av_files = 'const AVIMG = ' + json.dumps({a.stem: f'avatars/{a.name}' for a in avatars}) + ';'
     assert '__' not in css.replace('__hitchcal', '') and '/*__HOLIDAY_SVG__*/' not in js
 
     OUT.mkdir(exist_ok=True)
     page = (f'<title>HitchCal</title>\n<meta name="claude:viewport-fit-sides" content="cover">\n{FONTS}\n'
-            f'<style>\n{css}</style>\n{body}\n<script>\n{js}</script>\n')
+            f'<style>\n{css}</style>\n{body}\n<script>\n{js.replace("/*__AVATARS__*/", av_inline)}</script>\n')
     (OUT / 'hitchcal.html').write_text(page, encoding='utf-8')
-    (OUT / 'app.js').write_text(js, encoding='utf-8')
+    (OUT / 'app.js').write_text(js.replace('/*__AVATARS__*/', av_files), encoding='utf-8')
 
     head = f'''<!doctype html>
 <html lang="en">
@@ -71,7 +74,7 @@ img{{max-width:100%}}
 </head>
 <body>
 '''
-    (DIST / 'index.html').write_text(head + body + f'\n<noscript>HitchCal needs JavaScript turned on.</noscript>\n<script>\n{js}</script>\n</body>\n</html>\n', encoding='utf-8')
+    (DIST / 'index.html').write_text(head + body + f'\n<noscript>HitchCal needs JavaScript turned on.</noscript>\n<script>\n{js.replace("/*__AVATARS__*/", av_files)}</script>\n</body>\n</html>\n', encoding='utf-8')
 
     (DIST / 'manifest.webmanifest').write_text(json.dumps({
         "name": "HitchCal", "short_name": "HitchCal", "description": DESC, "start_url": ".", "scope": ".",
@@ -117,6 +120,9 @@ self.addEventListener('fetch', e => {
   to = "/index.html"
   status = 200
 ''')
+    (DIST / 'avatars').mkdir(exist_ok=True)
+    for a in avatars:
+        (DIST / 'avatars' / a.name).write_bytes(a.read_bytes())
     (DIST / 'robots.txt').write_text('User-agent: *\nAllow: /\n')
     (DIST / 'jspdf.umd.min.js').write_bytes((ROOT / 'vendor' / 'jspdf.umd.min.js').read_bytes())  # jsPDF 2.5.1, MIT licence
     (DIST / '.nojekyll').write_text('')
