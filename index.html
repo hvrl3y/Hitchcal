@@ -695,7 +695,7 @@ const KEY = 'hitchcal_v2';
 const DEF = () => ({
   setup: false, demo: false, name: '', icon: '', photo: '', hitchStart: '',
   pattern: { daysOn: 14, daysOff: 14, shiftType: 'day', startTime: '06:00', endTime: '18:00', alternating: false },
-  earnings: { payType: 'dayrate', dayRate: 750, hourlyRate: 45, hoursPerShift: 12, otAfter: 8, perDiem: 75, mileageRate: 0.7, roundTrip: 280, travelDays: 0, travelRate: 750 },
+  earnings: { payType: 'dayrate', dayRate: 0, hourlyRate: 0, hoursPerShift: 12, otAfter: 8, perDiem: 0, mileageRate: 0, roundTrip: 0, travelDays: 0, travelRate: 0 },
   bonuses: [], certs: [], notes: {}, rosters: [], hitchMiles: {}, colors: {}, theme: 'system', showHolidays: true
 });
 let S = DEF();
@@ -853,6 +853,7 @@ function dailyPay() {
 }
 /* Miles can differ hitch to hitch: an override is stored against the hitch's first day, otherwise the usual round trip applies. */
 const milesFor = key => (key && S.hitchMiles[key] != null) ? num(S.hitchMiles[key]) : num(S.earnings.roundTrip);
+const hasRates = () => dailyPay() > 0 || num(S.earnings.perDiem) > 0;
 function hitchPay(days, o = {}) {
   const e = S.earnings, base = days * dailyPay(), diem = days * num(e.perDiem);
   const mi = o.mi == null ? num(e.roundTrip) : o.mi, tn = o.travel == null ? num(e.travelDays) : o.travel;
@@ -939,6 +940,84 @@ function buildICS() {
   }
   out.push('END:VCALENDAR');
   return out.join('\r\n');
+}
+
+/* ───────── printable year (PDF) ───────── */
+function loadPdfLib() {
+  return new Promise((res, rej) => {
+    if (window.jspdf) return res(window.jspdf.jsPDF);
+    const s = document.createElement('script'); s.src = 'jspdf.umd.min.js';
+    s.onload = () => (window.jspdf ? res(window.jspdf.jsPDF) : rej(new Error('missing'))); s.onerror = rej;
+    document.head.appendChild(s);
+  });
+}
+const tintRgb = (hex, a) => { const n = parseInt(hex.slice(1), 16); return [n >> 16, (n >> 8) & 255, n & 255].map(v => Math.round(v * a + 255 * (1 - a))); };
+function buildPdf(J, year) {
+  const doc = new J({ unit: 'pt', format: 'letter' }), sch = me(), p = S.pattern, W = 612, M = 36;
+  const cDay = colorOf('day'), cNight = colorOf('night'), cHome = colorOf('home');
+  const fill = (hex, a) => doc.setFillColor(...tintRgb(hex, a));
+  const ink = (r, g = r, b = r) => doc.setTextColor(r, g, b);
+  const font = (size, bold) => { doc.setFont('helvetica', bold ? 'bold' : 'normal'); doc.setFontSize(size); };
+  const first = (S.name || '').trim().split(/\s+/)[0];
+  let nights = false;
+  for (let d = new Date(year, 0, 1); d.getFullYear() === year && !nights; d = addDays(d, 1)) { const ci = cellInfo(toKey(d), sch); nights = ci.type === 'on' && ci.shift === 'night'; }
+  font(22, true); ink(17); doc.text(`${S.name ? S.name.trim() + "'s" : 'My'} ${year} work schedule`, M, 56);
+  font(11); ink(90); doc.text(`${plural(p.daysOn, 'day')} away at work, then ${plural(p.daysOff, 'day')} home. The pattern repeats all year.`, M, 74);
+  let lx = M; const ly = 96;
+  const leg = (label, hex, ring) => {
+    if (ring) { doc.setDrawColor(209, 42, 32); doc.setLineWidth(1.2); doc.roundedRect(lx, ly - 8.5, 10, 10, 2, 2, 'S'); }
+    else if (hex) { fill(hex, .4); doc.roundedRect(lx, ly - 8.5, 10, 10, 2, 2, 'F'); }
+    else { doc.setDrawColor(185, 185, 185); doc.setLineWidth(.7); doc.roundedRect(lx, ly - 8.5, 10, 10, 2, 2, 'S'); }
+    font(9.5); ink(60); doc.text(label, lx + 14, ly); lx += 14 + doc.getTextWidth(label) + 20;
+  };
+  leg(nights ? 'At work, day shift' : 'Away at work', cDay); if (nights) leg('At work, night shift', cNight); leg('Home'); leg('Holiday', null, true);
+  const cols = 3, gap = 18, mw = (W - 2 * M - gap * (cols - 1)) / cols, cw = mw / 7, ch = 14.5, top = 124, mh = 126;
+  const hol = {}; holidays(year).forEach(h => { hol[toKey(h.date)] = h.name; });
+  for (let m = 0; m < 12; m++) {
+    const x0 = M + (m % cols) * (mw + gap), y0 = top + Math.floor(m / cols) * mh;
+    font(11, true); ink(17); doc.text(MONTHS[m], x0 + 2, y0);
+    font(6.5); ink(130); 'SMTWTFS'.split('').forEach((c, i) => doc.text(c, x0 + i * cw + cw / 2, y0 + 11, { align: 'center' }));
+    const lead = new Date(year, m, 1).getDay(), dim = new Date(year, m + 1, 0).getDate();
+    for (let d = 1; d <= dim; d++) {
+      const idx = lead + d - 1, cx = x0 + (idx % 7) * cw, cy = y0 + 14 + Math.floor(idx / 7) * ch, k = `${year}-${pad(m + 1)}-${pad(d)}`, ci = cellInfo(k, sch), on = ci.type === 'on';
+      if (on) { fill(ci.shift === 'night' ? cNight : cDay, .4); doc.roundedRect(cx + .8, cy + .8, cw - 1.600, ch - 1.600, 2, 2, 'F'); }
+      if (hol[k]) { doc.setDrawColor(209, 42, 32); doc.setLineWidth(1.100); doc.roundedRect(cx + .8, cy + .8, cw - 1.600, ch - 1.600, 2, 2, 'S'); }
+      font(7.5, on || !!hol[k]); ink(on ? 20 : 95); doc.text(String(d), cx + cw / 2, cy + ch / 2 + 2.600, { align: 'center' });
+    }
+  }
+  const hy = 640, hs = holidays(year), half = Math.ceil(hs.length / 2), colW = (W - 2 * M) / 2;
+  font(13, true); ink(17); doc.text(`${year} holidays`, M, hy);
+  hs.forEach((h, i) => {
+    const x = M + (i < half ? 0 : colW), y = hy + 20 + (i < half ? i : i - half) * 16, off = dayType(toKey(h.date), sch) === 'off';
+    fill(off ? cHome : cDay, off ? .85 : .4); doc.circle(x + 4, y - 3.500, 3.500, 'F');
+    font(10, true); ink(17); doc.text(h.name, x + 13, y); const w = doc.getTextWidth(h.name);
+    font(10); ink(95); doc.text(`${DS[h.date.getDay()]}, ${MS[h.date.getMonth()]} ${h.date.getDate()}`, x + 13 + w + 6, y);
+    font(10, true); if (off) ink(27, 127, 55); else ink(95); doc.text(off ? 'Home' : 'At work', x + colW - 16, y, { align: 'right' });
+  });
+  font(8); ink(140); doc.text(`Made with HitchCal on ${fmtFull(new Date())}. Schedules can change, so check with ${first || 'them'} before making plans.`, M, 766);
+  return doc;
+}
+function openPdfSheet() {
+  const y = new Date().getFullYear();
+  openSheet({
+    title: 'Year calendar PDF', left: 'Close',
+    body: `<p class="foot" style="margin:6px 4px 14px;font-size:15px">A one-page calendar of your year with every holiday marked as home or at work. Written in plain words, so family can read it without the app.</p>
+      <div class="seg" id="pdf-year"><button type="button" data-act="seg" data-val="${y}" class="on">${y}</button><button type="button" data-act="seg" data-val="${y + 1}">${y + 1}</button></div>
+      <button class="btn primary" data-act="pdf-make" style="margin-top:14px">${IC.down}Create PDF</button>`
+  });
+}
+async function exportPdf() {
+  const year = +segVal($('#pdf-year')) || new Date().getFullYear(), name = `hitchcal-${year}.pdf`;
+  if (EMBEDDED) return toast('Saving files is switched off in this preview. It works on the live site.');
+  let J; try { J = await loadPdfLib(); } catch (e) { return toast("Couldn't load the PDF tool. Check your connection and try again."); }
+  const blob = buildPdf(J, year).output('blob');
+  try {
+    const file = new File([blob], name, { type: 'application/pdf' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: `${year} work schedule` }); closeSheet(); return; }
+  } catch (e) { if (e && e.name === 'AbortError') return; }
+  const url = URL.createObjectURL(blob), a = document.createElement('a');
+  a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 4000);
+  closeSheet(); toast(`Saved ${name}`);
 }
 
 /* ───────── shared bits of UI ───────── */
@@ -1120,8 +1199,8 @@ function renderToday() {
 
   const hk = toKey(on ? info.cs : info.until), full = fullPay(hk, p.daysOn), worked = on ? info.dayNum : 0, got = earnedPay(hk, worked, p.daysOn);
   h += `<div class="sec-title">${on ? 'This hitch' : 'Next hitch'}</div><button class="card-btn" data-act="tab" data-tab="pay">
-    <div class="pay-line"><span class="big">${money(on ? got.total : full.total)}</span>${IC.chev}</div>
-    ${on ? `<div class="track"><i style="width:${Math.round(clamp(got.total / (full.total || 1)) * 100)}%"></i></div><div class="cap"><span>Earned so far</span><span>${money(full.total)} at hitch end</span></div>`
+    <div class="pay-line"><span class="big">${money(hasRates() ? (on ? got.total : full.total) : 0)}</span>${IC.chev}</div>
+    ${!hasRates() ? '<div class="cap"><span>Add your pay rates to see what each hitch earns</span></div>' : on ? `<div class="track"><i style="width:${Math.round(clamp(got.total / (full.total || 1)) * 100)}%"></i></div><div class="cap"><span>Earned so far</span><span>${money(full.total)} at hitch end</span></div>`
       : `<div class="cap"><span>Estimate for ${plural(p.daysOn, 'day')}</span><span>Starts ${fmtDay(info.until)}</span></div>`}
   </button>`;
 
@@ -1273,6 +1352,7 @@ function renderPay() {
   const hk = toKey(on ? info.cs : info.until), full = fullPay(hk, p.daysOn), worked = on ? info.dayNum : 0, got = earnedPay(hk, worked, p.daysOn), show = on ? got : full, days = on ? worked : p.daysOn, tN = num(e.travelDays);
   const yp = yearPay(yr), rate = e.payType === 'hourly' ? `$${num(e.hourlyRate)}/hr × ${num(e.hoursPerShift)} hrs` : `${money(num(e.dayRate))}/day`;
   let h = `<div class="eyebrow">${on ? `Day ${info.dayNum} of ${info.total}` : `Next hitch starts ${fmtMD(info.until)}`}</div><h1 class="lt">Pay</h1>
+  ${hasRates() ? '' : `<button class="banner" data-act="pay-edit"><span>Your pay rates aren't set yet, so everything shows $0.</span><b>Add rates</b>${IC.chev}</button>`}
   <div class="pcard"><div class="eyebrow">${on ? 'Earned this hitch' : 'Next hitch estimate'}</div><div class="big">${money(show.total)}</div>
     ${on ? `<div class="track"><i style="width:${Math.round(clamp(got.total / (full.total || 1)) * 100)}%"></i></div><div class="cap"><span>${plural(worked, 'day')} worked</span><span>${money(full.total)} at hitch end</span></div>` : `<div class="cap" style="margin-top:6px"><span>${plural(p.daysOn, 'day')} · ${esc(rate)}</span></div>`}
   </div>
@@ -1379,7 +1459,7 @@ function renderCrew() {
   const p = S.pattern, info = nowInfo(me()), on = info.phase === 'on';
   let h = `<div class="eyebrow">${S.rosters.length ? `${S.rosters.length} of 5 schedules` : 'Family and coworkers'}</div><h1 class="lt">Crew</h1>
   <div class="pcard"><div class="me"><span class="avatar lg">${avInner(S)}</span><span class="t"><b>${esc(S.name || 'My schedule')}</b><small>${patText(p)} · ${p.alternating ? 'Days and nights' : shiftName(p.shiftType)}</small></span><span class="chip ${on ? (info.shift === 'night' ? 'c-night' : 'c-day') : 'c-home'}">${on ? 'On hitch' : 'Home'}</span></div>
-    <button class="btn primary" data-act="share">${IC.share}Share my schedule</button><button class="btn plain" data-act="copy-link">Copy link instead</button></div>
+    <button class="btn primary" data-act="share">${IC.share}Share my schedule</button><button class="btn plain" data-act="copy-link">Copy link instead</button><button class="btn plain" data-act="pdf-open" style="margin-top:0">Printable year calendar (PDF)</button></div>
   <div class="sec-title">Schedules you follow</div>`;
   if (!S.rosters.length) {
     h += `<div class="empty"><div class="ei">${IC.people}</div><h3>See when you're both home</h3><p>Add a spouse's or coworker's rotation. It shows as a colored line on your calendar, and HitchCal finds the days you're off together.</p><button class="btn primary" data-act="crew-add">Add a schedule</button></div>`;
@@ -1451,7 +1531,8 @@ function renderMore() {
     <button class="row" data-act="colors-open"><span class="itile" style="--c:var(--tint)">${IC.star}</span><span class="t"><b>Colors and themes</b></span><span class="cdots">${COLOR_ROWS.map(([k]) => `<i style="background:${colorOf(k)}"></i>`).join('')}</span>${IC.chev}</button>
     <div class="row"><span class="itile" style="--c:var(--tint)">${IC.flag}</span><span class="t"><b>Holiday artwork</b><small>Faint illustrations on calendar days</small></span><button class="switch${S.showHolidays ? ' on' : ''}" role="switch" aria-checked="${!!S.showHolidays}" aria-label="Holiday artwork" data-act="switch" data-change="toggle-hol"></button></div></div>
   <div class="sec-h">Your data</div>
-  <div class="group ic"><button class="row" data-act="export-ics"><span class="itile" style="--c:var(--day)">${IC.cal}</span><span class="t"><b>Export to a calendar app</b><small>A year of hitches as an .ics file</small></span>${IC.chev}</button>
+  <div class="group ic"><button class="row" data-act="pdf-open"><span class="itile" style="--c:var(--danger)">${IC.cal}</span><span class="t"><b>Year calendar PDF</b><small>One page with your year and holidays, for family</small></span>${IC.chev}</button>
+    <button class="row" data-act="export-ics"><span class="itile" style="--c:var(--day)">${IC.cal}</span><span class="t"><b>Export to a calendar app</b><small>A year of hitches as an .ics file</small></span>${IC.chev}</button>
     <button class="row" data-act="backup"><span class="itile" style="--c:var(--day)">${IC.down}</span><span class="t"><b>Back up</b><small>Save everything to a file</small></span>${IC.chev}</button>
     <button class="row" data-act="restore"><span class="itile" style="--c:var(--day)">${IC.up}</span><span class="t"><b>Restore from a backup</b></span>${IC.chev}</button></div>
   <p class="foot">Everything is stored on this device. Nothing is uploaded.</p>
@@ -1505,7 +1586,8 @@ let obStep = 0, pendingImport = null;
 function demoData() {
   const t = startOfDay(new Date()), d = DEF();
   return {
-    ...d, setup: true, demo: true, name: 'Sample Hand', icon: 'worm', hitchStart: toKey(addDays(t, -8)),
+    ...d, setup: true, demo: true, name: 'Sample Hand', icon: 'worm',
+    earnings: { ...d.earnings, dayRate: 750, hourlyRate: 45, perDiem: 75, mileageRate: 0.7, roundTrip: 280, travelRate: 750 }, hitchStart: toKey(addDays(t, -8)),
     certs: [{ id: uid(), name: 'H2S Alive', expiry: toKey(addDays(t, 24)) }, { id: uid(), name: 'First Aid / CPR', expiry: toKey(addDays(t, 210)) }],
     rosters: [{ id: uid(), name: 'Sarah', icon: 'heart', photo: '', hitchStart: toKey(addDays(t, -3)), color: COLORS[0], pattern: { daysOn: 7, daysOff: 7 } }],
     notes: { [toKey(addDays(t, 3))]: { text: "Mom's birthday", emoji: '🎂' } },
@@ -1597,6 +1679,8 @@ const A = {
   'note-del': () => { delete S.notes[$('#sheet-body').dataset.k]; save(); closeSheet(); render(); toast('Note deleted'); },
   theme: v => { S.theme = v; save(); applyTheme(); },
   'toggle-hol': on => { S.showHolidays = on; save(); },
+  'pdf-open': () => openPdfSheet(),
+  'pdf-make': () => exportPdf(),
   'export-ics': () => deliverFile('hitchcal.ics', 'text/calendar', buildICS()),
   backup: () => deliverFile(`hitchcal-backup-${todayKey()}.json`, 'application/json', JSON.stringify(S, null, 2)),
   restore: () => $('#restore-file').click(),
@@ -1683,7 +1767,7 @@ setInterval(tick, 1000);
 if (!EMBEDDED && 'serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => { /* offline support is optional */ });
 
 /* exposed for the schedule-math self-check only */
-window.__hitchcal = { cellInfo, nowInfo, hitchBounds, transitions, holidays, dayType, parseShare, toKey };
+window.__hitchcal = { pdfData: y => loadPdfLib().then(J => buildPdf(J, y).output('datauristring')), cellInfo, nowInfo, hitchBounds, transitions, holidays, dayType, parseShare, toKey };
 })();
 </script>
 </body>

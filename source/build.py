@@ -118,6 +118,7 @@ self.addEventListener('fetch', e => {
   status = 200
 ''')
     (DIST / 'robots.txt').write_text('User-agent: *\nAllow: /\n')
+    (DIST / 'jspdf.umd.min.js').write_bytes((ROOT / 'vendor' / 'jspdf.umd.min.js').read_bytes())  # jsPDF 2.5.1, MIT licence
     (DIST / '.nojekyll').write_text('')
     (DIST / 'favicon.svg').write_text('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="15" fill="#FF9F0A"/><rect x="13" y="17" width="38" height="34" rx="7" fill="#1C1200"/><rect x="19" y="29" width="26" height="7" rx="3.5" fill="#FF9F0A"/><rect x="19" y="40" width="12" height="5" rx="2.5" fill="#FF9F0A" opacity=".55"/><rect x="22" y="11" width="5" height="11" rx="2.5" fill="#1C1200"/><rect x="37" y="11" width="5" height="11" rx="2.5" fill="#1C1200"/></svg>\n')
     icons()
