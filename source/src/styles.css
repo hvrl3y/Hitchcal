@@ -314,6 +314,31 @@ button.row:active,.card-btn:active{background:var(--fill)}
 .cs.custom.on{background:var(--rc)}
 .cs.custom input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;padding:0;border:0}
 
+.btn-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}
+.pcard .btn-row .btn{margin-top:0}
+.family{position:absolute;inset:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;background:var(--bg);padding-bottom:calc(var(--sab) + 36px)}
+.fam-wrap{max-width:560px;padding-top:calc(var(--sat) + 22px)}
+.fam-bar+.fam-wrap{padding-top:18px}
+.fam-bar{position:sticky;top:0;z-index:5;padding-top:var(--sat);background:var(--bar);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-bottom:.5px solid var(--sep)}
+.fam-bar-in{max-width:560px;display:flex;align-items:center;gap:12px;min-height:56px}
+.fam-bar-in .t{flex:1;min-width:0}
+.fam-bar-in .t b{display:block;font-size:15px}
+.fam-bar-in .t small{display:block;font-size:13px;color:var(--label-2)}
+.fam-head{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.fam-h1{font-size:30px;line-height:1.15;font-weight:800;letter-spacing:-.022em;text-wrap:balance}
+.fam-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+.fam-cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;background:var(--surface);border-radius:var(--r-card);padding:12px 10px}
+.fam-cal small{font-size:11px;font-weight:600;color:var(--label-2);text-align:center;padding-bottom:4px}
+.fc{position:relative;aspect-ratio:1;border-radius:8px;display:grid;place-items:center;font-size:15px;font-variant-numeric:tabular-nums;--c:transparent;--a:0%;--b:0%;background:linear-gradient(90deg,transparent 0 var(--a),var(--c) var(--a) var(--b),transparent var(--b) 100%),var(--fill)}
+.fc.d{--c:color-mix(in srgb,var(--day) 42%,transparent)}
+.fc.n{--c:color-mix(in srgb,var(--night) 46%,transparent)}
+.fc b{font-weight:500}
+.fc.full b{font-weight:700}
+.fc.now b{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:var(--tint);color:var(--on-tint);font-weight:700}
+.fc .hd{position:absolute;bottom:4px;left:50%;width:5px;height:5px;margin-left:-2.5px;border-radius:50%;background:var(--danger)}
+.fam-cta{margin-top:22px;text-decoration:none}
+.sec-title .cal-ctl .icon-btn{width:32px;height:32px}
+
 /* ── Push page ── */
 .page{position:absolute;inset:0;z-index:30;background:var(--bg);transform:translateX(100%);visibility:hidden;transition:transform .4s var(--ease),visibility 0s .4s}
 .page.open{transform:none;visibility:visible;transition:transform .4s var(--ease),visibility 0s}

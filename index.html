@@ -339,6 +339,31 @@ button.row:active,.card-btn:active{background:var(--fill)}
 .cs.custom.on{background:var(--rc)}
 .cs.custom input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;padding:0;border:0}
 
+.btn-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}
+.pcard .btn-row .btn{margin-top:0}
+.family{position:absolute;inset:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;background:var(--bg);padding-bottom:calc(var(--sab) + 36px)}
+.fam-wrap{max-width:560px;padding-top:calc(var(--sat) + 22px)}
+.fam-bar+.fam-wrap{padding-top:18px}
+.fam-bar{position:sticky;top:0;z-index:5;padding-top:var(--sat);background:var(--bar);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-bottom:.5px solid var(--sep)}
+.fam-bar-in{max-width:560px;display:flex;align-items:center;gap:12px;min-height:56px}
+.fam-bar-in .t{flex:1;min-width:0}
+.fam-bar-in .t b{display:block;font-size:15px}
+.fam-bar-in .t small{display:block;font-size:13px;color:var(--label-2)}
+.fam-head{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.fam-h1{font-size:30px;line-height:1.15;font-weight:800;letter-spacing:-.022em;text-wrap:balance}
+.fam-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+.fam-cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;background:var(--surface);border-radius:var(--r-card);padding:12px 10px}
+.fam-cal small{font-size:11px;font-weight:600;color:var(--label-2);text-align:center;padding-bottom:4px}
+.fc{position:relative;aspect-ratio:1;border-radius:8px;display:grid;place-items:center;font-size:15px;font-variant-numeric:tabular-nums;--c:transparent;--a:0%;--b:0%;background:linear-gradient(90deg,transparent 0 var(--a),var(--c) var(--a) var(--b),transparent var(--b) 100%),var(--fill)}
+.fc.d{--c:color-mix(in srgb,var(--day) 42%,transparent)}
+.fc.n{--c:color-mix(in srgb,var(--night) 46%,transparent)}
+.fc b{font-weight:500}
+.fc.full b{font-weight:700}
+.fc.now b{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:var(--tint);color:var(--on-tint);font-weight:700}
+.fc .hd{position:absolute;bottom:4px;left:50%;width:5px;height:5px;margin-left:-2.5px;border-radius:50%;background:var(--danger)}
+.fam-cta{margin-top:22px;text-decoration:none}
+.sec-title .cal-ctl .icon-btn{width:32px;height:32px}
+
 /* ── Push page ── */
 .page{position:absolute;inset:0;z-index:30;background:var(--bg);transform:translateX(100%);visibility:hidden;transition:transform .4s var(--ease),visibility 0s .4s}
 .page.open{transform:none;visibility:visible;transition:transform .4s var(--ease),visibility 0s}
@@ -560,6 +585,7 @@ img{max-width:100%}
   <input type="file" id="restore-file" accept="application/json,.json" hidden>
   <input type="file" id="photo-file" accept="image/*" hidden>
 </div>
+<div class="family" id="family" hidden></div>
 
 <noscript>HitchCal needs JavaScript turned on.</noscript>
 <script>
@@ -895,9 +921,12 @@ const SHARE_BASE = (!EMBEDDED && /^https?:$/.test(location.protocol)) ? location
 function makeShareLink() {
   const p = S.pattern;
   const d = { n: S.name, i: S.icon || undefined, s: S.hitchStart, p: { on: p.daysOn, off: p.daysOff }, t: p.shiftType, st: p.startTime, et: p.endTime, a: p.alternating ? 1 : 0 };
-  const b = btoa(unescape(encodeURIComponent(JSON.stringify(d)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-  return SHARE_BASE + '?s=' + b;
+  return btoa(unescape(encodeURIComponent(JSON.stringify(d)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
+const shareCode = makeShareLink;
+const crewLink = () => SHARE_BASE + '?s=' + shareCode();
+const familyLink = () => SHARE_BASE + '?f=' + shareCode();
+function parseFamily(q) { const m = String(q || '').match(/[?&]f=([A-Za-z0-9_\-+/=%]+)/); return m ? parseShare('?s=' + m[1]) : null; }
 function parseShare(str) {
   str = String(str || '').trim();
   if (!str) return null;
@@ -1160,6 +1189,7 @@ function render() {
   if ($('#page-certs').classList.contains('open')) renderCerts();
 }
 function tick() {
+  if (FAM) { if (!document.hidden) famTick(); return; }
   if (!S.setup || document.hidden) return;
   const info = nowInfo(me());
   if (info.phase !== lastPhase || todayKey() !== lastDay) { render(); return; }
@@ -1459,7 +1489,10 @@ function renderCrew() {
   const p = S.pattern, info = nowInfo(me()), on = info.phase === 'on';
   let h = `<div class="eyebrow">${S.rosters.length ? `${S.rosters.length} of 5 schedules` : 'Family and coworkers'}</div><h1 class="lt">Crew</h1>
   <div class="pcard"><div class="me"><span class="avatar lg">${avInner(S)}</span><span class="t"><b>${esc(S.name || 'My schedule')}</b><small>${patText(p)} · ${p.alternating ? 'Days and nights' : shiftName(p.shiftType)}</small></span><span class="chip ${on ? (info.shift === 'night' ? 'c-night' : 'c-day') : 'c-home'}">${on ? 'On hitch' : 'Home'}</span></div>
-    <button class="btn primary" data-act="share">${IC.share}Share my schedule</button><button class="btn plain" data-act="copy-link">Copy link instead</button><button class="btn plain" data-act="pdf-open" style="margin-top:0">Printable year calendar (PDF)</button></div>
+    <button class="btn primary" data-act="share-family">${IC.share}Share with family</button>
+    <p class="foot" style="margin:8px 4px 0;text-align:center">A simple page anyone can open, no app needed. It counts down to when you're home.</p>
+    <div class="btn-row"><button class="btn gray" data-act="family-preview">Preview it</button><button class="btn gray" data-act="share">Crew link</button></div>
+    <button class="btn plain" data-act="pdf-open">Printable year calendar (PDF)</button></div>
   <div class="sec-title">Schedules you follow</div>`;
   if (!S.rosters.length) {
     h += `<div class="empty"><div class="ei">${IC.people}</div><h3>See when you're both home</h3><p>Add a spouse's or coworker's rotation. It shows as a colored line on your calendar, and HitchCal finds the days you're off together.</p><button class="btn primary" data-act="crew-add">Add a schedule</button></div>`;
@@ -1512,10 +1545,84 @@ function openRoster(id, pre) {
   });
 }
 async function shareSchedule() {
-  const link = makeShareLink(), info = nowInfo(me()), p = S.pattern;
+  const link = crewLink(), info = nowInfo(me()), p = S.pattern;
   const text = `${S.name || 'My'} hitch schedule: ${patText(p)}, ${info.phase === 'on' ? 'on hitch' : 'home'} until ${fmtDay(info.until)}. Add it in HitchCal:`;
   if (!EMBEDDED && navigator.share) {
     try { await navigator.share({ title: 'HitchCal schedule', text, url: link }); return; } catch (e) { if (e && e.name === 'AbortError') return; }
+  }
+  copyText(`${text} ${link}`, 'Link copied. Paste it in a text.');
+}
+
+/* ───────── Family page: a read-only view for people without the app ───────── */
+let FAM = null;
+const famCal = { y: 0, m: 0 };
+const TIME_RE = /^\d{2}:\d{2}$/;
+const famSched = d => ({ hitchStart: d.s, pattern: { daysOn: clampInt(d.p.on, 1, 120), daysOff: clampInt(d.p.off, 1, 120), shiftType: d.t === 'night' ? 'night' : 'day', startTime: TIME_RE.test(d.st || '') ? d.st : '06:00', endTime: TIME_RE.test(d.et || '') ? d.et : '18:00', alternating: !!d.a } });
+function showFamily(d, preview) {
+  const first = String(d.n || '').trim().split(/\s+/)[0].slice(0, 24);
+  FAM = { d, sch: famSched(d), preview, first, phase: '' };
+  const n = new Date(); famCal.y = n.getFullYear(); famCal.m = n.getMonth();
+  $('#app').hidden = true; const f = $('#family'); f.hidden = false; f.scrollTop = 0;
+  if (!preview) document.title = first ? `${first}'s schedule` : 'Work schedule';
+  renderFamily();
+}
+function closeFamily() { FAM = null; $('#family').hidden = true; $('#app').hidden = false; render(); }
+function famMonth() {
+  const { y, m } = famCal, sch = FAM.sch, lead = new Date(y, m, 1).getDay(), dim = new Date(y, m + 1, 0).getDate(), tk = todayKey();
+  let h = 'SMTWTFS'.split('').map(c => `<small>${c}</small>`).join('') + '<i></i>'.repeat(lead);
+  for (let d = 1; d <= dim; d++) {
+    const k = `${y}-${pad(m + 1)}-${pad(d)}`, ci = cellInfo(k, sch), away = ci.type === 'on' || ci.tail, hol = holidayOn(k);
+    const style = away ? `--a:${(ci.a * 100).toFixed(1)}%;--b:${(ci.b * 100).toFixed(1)}%` : '';
+    h += `<span class="fc${away ? (ci.shift === 'night' ? ' n' : ' d') : ''}${away && !ci.split ? ' full' : ''}${k === tk ? ' now' : ''}" style="${style}" title="${hol ? esc(hol) : ''}"><b>${d}</b>${hol ? '<i class="hd"></i>' : ''}</span>`;
+  }
+  return h;
+}
+function renderFamily() {
+  const now = new Date(), today = startOfDay(now), sch = FAM.sch, p = sch.pattern, info = nowInfo(sch, now), on = info.phase === 'on';
+  const who = FAM.first || 'They', is = FAM.first ? `${who} is` : "They're", them = FAM.first || 'them';
+  const cls = on ? (info.shift === 'night' ? 'night' : 'day') : 'home';
+  FAM.phase = info.phase;
+  let h = FAM.preview ? `<div class="fam-bar"><div class="wrap fam-bar-in"><span class="t"><b>Family page preview</b><small>This is what they'll see</small></span><button class="pill-btn" data-act="share-family">Share</button><button class="txt-btn strong" data-act="fam-close">Done</button></div></div>` : '';
+  h += `<div class="wrap fam-wrap">
+    <div class="fam-head"><span class="avatar lg">${avInner({ icon: okIcon(FAM.d.i), name: FAM.d.n })}</span><span><span class="eyebrow">${fmtLong(now)}</span><h1 class="fam-h1">${esc(is)} ${on ? 'at work' : 'home'}</h1></span></div>
+    <div class="hero ${cls}">
+      <div class="lab">${on ? 'At work' : 'Home'}</div>
+      <div class="ring" role="img" aria-label="${on ? 'Day ' + info.dayNum + ' of ' + info.total + ' at work' : 'Day ' + info.dayNum + ' of ' + info.total + ' at home'}"><svg viewBox="0 0 60 60"><circle class="tr" cx="30" cy="30" r="26"/><circle class="ar" id="fam-arc" cx="30" cy="30" r="26" stroke-dasharray="${RC}" stroke-dashoffset="${RC * (1 - info.pct)}"/></svg><div class="mid"><b>${info.dayNum}</b><small>of ${info.total}</small></div></div>
+      <div class="lead">${esc(is)} ${on ? 'home' : 'back at work'} in</div>
+      <div class="cd" data-cd="full">${cdHTML(info.ms, 'full')}</div>
+      <div class="sub">${on ? 'Off work' : 'Next shift starts'} ${fmtLong(info.until)} at ${fmtClock(info.until)}</div>
+    </div>`;
+  const tr = transitions(sch, 6, now), ranges = [];
+  let start = now, cur = info.phase;
+  tr.forEach(t => { ranges.push({ type: cur, a: start, b: t.date }); start = t.date; cur = t.type; });
+  h += `<div class="sec-title">What's next</div><div class="group">${ranges.map((r, i) => {
+    const away = r.type === 'on', dot = away ? (shiftFor(toKey(r.a), sch) === 'night' ? 'var(--night)' : 'var(--day)') : 'var(--home)';
+    const left = Math.max(1, Math.ceil((r.b - now) / 864e5));
+    return `<div class="row"><span class="fam-dot" style="background:${dot}"></span><span class="t"><b>${away ? 'At work' : 'Home'}</b><small>${i === 0 ? `Now until ${fmtDay(r.b)}` : `${fmtDay(r.a)} to ${fmtDay(r.b)}`}</small></span>${i === 0 ? `<span class="chip ${away ? 'c-gray' : 'c-home'}">${plural(left, 'day')} left</span>` : `<span class="v">${plural(away ? p.daysOn : p.daysOff, 'day')}</span>`}</div>`;
+  }).join('')}</div>`;
+  h += `<div class="sec-title">${MONTHS[famCal.m]} ${famCal.y}<span class="cal-ctl"><button class="icon-btn" data-act="fam-prev" aria-label="Previous month"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><button class="icon-btn" data-act="fam-next" aria-label="Next month"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button></span></div>
+    <div class="fam-cal">${famMonth()}</div>
+    <div class="legend"><span><i style="background:var(--day)"></i>At work</span><span><i style="background:var(--fill-2)"></i>Home</span><span><i style="background:var(--danger)"></i>Holiday</span></div>`;
+  const hs = [];
+  [now.getFullYear(), now.getFullYear() + 1].forEach(y => holidays(y).forEach(x => { if (x.date >= today && hs.length < 6) hs.push(x); }));
+  h += `<div class="sec-title">Coming holidays</div><div class="group">${hs.map(x => { const off = dayType(toKey(x.date), sch) === 'off'; return `<div class="row${off ? '' : ' dim'}"><span class="t"><b>${esc(x.name)}</b><small>${fmtDay(x.date)}${x.date.getFullYear() !== now.getFullYear() ? ', ' + x.date.getFullYear() : ''}</small></span><span class="chip ${off ? 'c-home' : 'c-gray'}">${off ? 'Home' : 'At work'}</span></div>`; }).join('')}</div>
+    <p class="foot">Times are when shifts start and end; travel to and from work isn't included. Schedules can change, so check with ${esc(them)} before making plans.</p>
+    ${FAM.preview ? '' : `<a class="btn gray fam-cta" href="${esc(SHARE_BASE)}" target="_blank" rel="noopener">Work a rotation too? Get HitchCal</a>`}
+  </div>`;
+  $('#family').innerHTML = h;
+}
+function famTick() {
+  const info = nowInfo(FAM.sch);
+  if (info.phase !== FAM.phase) return renderFamily();
+  $$('#family [data-cd]').forEach(el => { el.innerHTML = cdHTML(info.ms, el.dataset.cd); });
+  const arc = $('#fam-arc'); if (arc) arc.style.strokeDashoffset = RC * (1 - info.pct);
+}
+async function shareFamily() {
+  if (!S.name.trim()) { toast('Add your name first so family knows whose schedule it is'); return openHitch(); }
+  const link = familyLink(), first = S.name.trim().split(/\s+/)[0];
+  const text = "Here's my work schedule. It counts down to when I'm home:";
+  if (!EMBEDDED && navigator.share) {
+    try { await navigator.share({ title: `${first}'s schedule`, text, url: link }); return; } catch (e) { if (e && e.name === 'AbortError') return; }
   }
   copyText(`${text} ${link}`, 'Link copied. Paste it in a text.');
 }
@@ -1668,7 +1775,7 @@ const A = {
   'crew-edit': el => openRoster(el.dataset.id),
   'crew-del': () => { const id = $('#sheet-body').dataset.id, r = S.rosters.find(x => x.id === id); ask({ title: `Remove ${r ? r.name : 'this schedule'}?`, msg: 'Their line comes off your calendar.', ok: 'Remove', red: true, onOk() { S.rosters = S.rosters.filter(x => x.id !== id); save(); closeSheet(); render(); toast('Schedule removed'); } }); },
   share: () => shareSchedule(),
-  'copy-link': () => copyText(makeShareLink(), 'Link copied'),
+  'copy-link': () => copyText(crewLink(), 'Link copied'),
   'ts-copy': () => copyText($('#ts-text').value, 'Copied'),
   'certs-open': () => { if (tab !== 'more') showTab('more'); renderCerts(); const pg = $('#page-certs'); $('.scroll', pg).scrollTop = 0; pg.classList.add('open'); },
   'page-back': () => { $('#page-certs').classList.remove('open'); render(); },
@@ -1679,6 +1786,11 @@ const A = {
   'note-del': () => { delete S.notes[$('#sheet-body').dataset.k]; save(); closeSheet(); render(); toast('Note deleted'); },
   theme: v => { S.theme = v; save(); applyTheme(); },
   'toggle-hol': on => { S.showHolidays = on; save(); },
+  'share-family': () => shareFamily(),
+  'family-preview': () => { if (!S.name.trim()) { toast('Add your name first so family knows whose schedule it is'); return openHitch(); } showFamily(parseShare('?s=' + shareCode()), true); },
+  'fam-close': () => closeFamily(),
+  'fam-prev': () => { const d = new Date(famCal.y, famCal.m - 1, 1); famCal.y = d.getFullYear(); famCal.m = d.getMonth(); renderFamily(); },
+  'fam-next': () => { const d = new Date(famCal.y, famCal.m + 1, 1); famCal.y = d.getFullYear(); famCal.m = d.getMonth(); renderFamily(); },
   'pdf-open': () => openPdfSheet(),
   'pdf-make': () => exportPdf(),
   'export-ics': () => deliverFile('hitchcal.ics', 'text/calendar', buildICS()),
@@ -1761,13 +1873,15 @@ $('#photo-file').addEventListener('change', e => {
 /* ───────── boot ───────── */
 load(); applyTheme(); applyColors();
 pendingImport = parseShare(location.search);
-if (S.setup) { showTab('today'); if (pendingImport) { const pre = pendingImport; pendingImport = null; setTimeout(() => openRoster(null, pre), 400); } }
+const famLink = parseFamily(location.search);
+if (famLink) showFamily(famLink, false);
+else if (S.setup) { showTab('today'); if (pendingImport) { const pre = pendingImport; pendingImport = null; setTimeout(() => openRoster(null, pre), 400); } }
 else startOnboarding();
 setInterval(tick, 1000);
 if (!EMBEDDED && 'serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => { /* offline support is optional */ });
 
 /* exposed for the schedule-math self-check only */
-window.__hitchcal = { pdfData: y => loadPdfLib().then(J => buildPdf(J, y).output('datauristring')), cellInfo, nowInfo, hitchBounds, transitions, holidays, dayType, parseShare, toKey };
+window.__hitchcal = { familyLink, pdfData: y => loadPdfLib().then(J => buildPdf(J, y).output('datauristring')), cellInfo, nowInfo, hitchBounds, transitions, holidays, dayType, parseShare, toKey };
 })();
 </script>
 </body>
