@@ -85,7 +85,7 @@ img{{max-width:100%}}
     }, indent=2))
 
     (DIST / 'sw.js').write_text('''// HitchCal offline support: try the network first so updates land, fall back to the saved copy on a bad signal.
-const CACHE = 'hitchcal-v4';
+const CACHE = 'hitchcal-v5';
 const SHELL = ['./', 'manifest.webmanifest', 'icon-192.png', 'favicon.svg'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL))); self.skipWaiting(); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k))))); self.clients.claim(); });
