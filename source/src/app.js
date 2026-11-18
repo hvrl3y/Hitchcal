@@ -258,7 +258,7 @@ function holidayOn(key) {
   if (!holCache[y]) { holCache[y] = {}; holidays(y).forEach(h => { holCache[y][toKey(h.date)] = h.name; }); }
   return holCache[y][key] || null;
 }
-/*__HOLIDAY_SVG__*/
+const HOL_SHORT = { "New Year's Day": 'New Yr', 'MLK Day': 'MLK', 'Presidents Day': 'Pres.', 'Memorial Day': 'Memor.', 'Juneteenth': 'Juneth.', 'Independence Day': 'July 4', 'Labor Day': 'Labor', 'Columbus Day': 'Columb.', 'Veterans Day': 'Vets', 'Thanksgiving': 'Thanks', 'Christmas Day': 'Xmas' };
 
 /* ───────── pay ───────── */
 function dailyPay() {
@@ -519,8 +519,8 @@ function applyTheme() {
 
 /* ───────── colors and themes ───────── */
 const HEX = /^#[0-9a-f]{6}$/i;
-const DEFC = { day: '#007AFF', night: '#5856D6', home: '#34C759', accent: '#FF9F0A' };
-const COLOR_ROWS = [['day', 'Day shift'], ['night', 'Night shift'], ['home', 'Days off'], ['accent', 'Buttons and highlights']];
+const DEFC = { day: '#007AFF', night: '#5856D6', home: '#34C759', accent: '#5B8DB8', hol: '#64D2FF' };
+const COLOR_ROWS = [['day', 'Day shift'], ['night', 'Night shift'], ['home', 'Days off'], ['accent', 'Buttons and highlights'], ['hol', 'Holiday labels']];
 const SWATCH = ['#007AFF', '#0E9F8E', '#34C759', '#84B816', '#FF9F0A', '#FF7A3D', '#FF3B30', '#E8508C', '#A855F7', '#5856D6', '#5B7FA6', '#8E8E93'];
 const THEMES = [
   ['Classic', {}],
@@ -528,28 +528,31 @@ const THEMES = [
   ['Pine', { day: '#0E9F8E', night: '#3F5BA9', home: '#84B816', accent: '#0E9F8E' }],
   ['Slate', { day: '#5B7FA6', night: '#7A6FB0', home: '#6FA58A', accent: '#5B7FA6' }],
   ['Rose', { day: '#E8508C', night: '#8A4FD6', home: '#22B8A6', accent: '#E8508C' }],
-  ['Crude', { day: '#C98A2B', night: '#6B7280', home: '#3F9B6C', accent: '#C98A2B' }]
+  ['Crude', { day: '#C98A2B', night: '#6B7280', home: '#3F9B6C', accent: '#C98A2B' }],
+  ['Brass', { accent: '#B8864A' }],
+  ['Signal', { accent: '#D2543C' }]
 ];
 const colorOf = k => S.colors[k] || DEFC[k];
+function colorTokens(c, dark) {
+  const mix = (x, pct, w) => `color-mix(in srgb,${x} ${pct}%,${w})`;
+  let o = '';
+  ['day', 'night', 'home'].forEach(n => {
+    const x = c[n]; if (!x) return;
+    o += `--${n}:${x};--${n}-bg:${mix(x, dark ? 30 : 15, 'transparent')};--${n}-text:${dark ? mix(x, 52, '#fff') : mix(x, 66, '#000')};--hero-${n}-a:${mix(x, 88, '#000')};--hero-${n}-b:${mix(x, 62, '#000')};`;
+  });
+  const hc = c.hol || DEFC.hol; o += `--hol:${hc};--hol-ink:${inkFor(hc)};`;
+  if (c.accent) o += `--tint:${c.accent};--on-tint:${inkFor(c.accent)};--tint-soft:${mix(c.accent, dark ? 22 : 17, 'transparent')};--tint-text:${dark ? mix(c.accent, 62, '#fff') : mix(c.accent, 60, '#000')};`;
+  return o;
+}
 function applyColors() {
   let el = $('#user-colors');
   if (!el) { el = document.createElement('style'); el.id = 'user-colors'; document.head.appendChild(el); }
-  const c = S.colors, mix = (x, pct, w) => `color-mix(in srgb,${x} ${pct}%,${w})`;
-  const set = dark => {
-    let o = '';
-    [['day', 'day'], ['night', 'night'], ['home', 'home']].forEach(([k, n]) => {
-      const x = c[k]; if (!x) return;
-      o += `--${n}:${x};--${n}-bg:${mix(x, dark ? 30 : 15, 'transparent')};--${n}-text:${dark ? mix(x, 52, '#fff') : mix(x, 66, '#000')};--hero-${n}-a:${mix(x, 88, '#000')};--hero-${n}-b:${mix(x, 62, '#000')};`;
-    });
-    if (c.accent) o += `--tint:${c.accent};--on-tint:${inkFor(c.accent)};--tint-soft:${mix(c.accent, dark ? 22 : 17, 'transparent')};--tint-text:${dark ? mix(c.accent, 62, '#fff') : mix(c.accent, 60, '#000')};`;
-    return o;
-  };
-  el.textContent = Object.keys(c).length ? `:root{${set(false)}}@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){${set(true)}}}:root[data-theme="dark"]{${set(true)}}` : '';
+  el.textContent = `:root{${colorTokens(S.colors, false)}}@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){${colorTokens(S.colors, true)}}}:root[data-theme="dark"]{${colorTokens(S.colors, true)}}`;
 }
 function colorsBody() {
   const cur = JSON.stringify(COLOR_ROWS.map(([k]) => colorOf(k).toUpperCase()));
   return `<div class="sec-h">Themes</div><div class="themes">${THEMES.map(([name, t], i) => { const full = COLOR_ROWS.map(([k]) => (t[k] || DEFC[k]).toUpperCase()); return `<button type="button" class="theme-btn${JSON.stringify(full) === cur ? ' on' : ''}" data-act="theme-pick" data-i="${i}"><b>${name}</b><span>${full.map(x => `<i style="background:${x}"></i>`).join('')}</span></button>`; }).join('')}</div>
-    ${COLOR_ROWS.map(([k, label]) => `<div class="sec-h">${label}</div><div class="group"><div class="cswatches">${SWATCH.map(x => `<button type="button" class="cs${colorOf(k).toUpperCase() === x ? ' on' : ''}" data-act="color-pick" data-k="${k}" data-c="${x}" style="--rc:${x}" aria-label="${label} ${x}"></button>`).join('')}<label class="cs custom${SWATCH.includes(colorOf(k).toUpperCase()) ? '' : ' on'}" style="--rc:${colorOf(k)}" aria-label="Custom ${label} color"><input type="color" data-color-k="${k}" value="${colorOf(k)}"></label></div></div>`).join('')}
+    ${COLOR_ROWS.map(([k, label]) => `<div class="sec-h">${label}</div><div class="group"><div class="cswatches">${SWATCH.map(x => `<button type="button" class="cs${colorOf(k).toUpperCase() === x ? ' on' : ''}" data-act="color-pick" data-k="${k}" data-c="${x}" style="--rc:${x}" aria-label="${label} ${x}"></button>`).join('')}<button type="button" class="cs custom${SWATCH.includes(colorOf(k).toUpperCase()) ? '' : ' on'}" style="--rc:${colorOf(k)}" data-act="picker-open" data-k="${k}" aria-label="Custom ${label} color"></button></div></div>`).join('')}
     <p class="foot">Changes apply right away. The last circle in each row opens a full color picker.</p>`;
 }
 function setColor(k, v, redraw = true) {
@@ -560,8 +563,70 @@ function setColor(k, v, redraw = true) {
 }
 const openColors = () => openSheet({ title: 'Colors and themes', left: 'Done', body: colorsBody() });
 
+/* ───────── color picker with live preview ───────── */
+let PK = null; // { k, h, s, v } while the picker is open
+function hsvToHex(h, s, v) {
+  s /= 100; v /= 100;
+  const c = v * s, x = c * (1 - Math.abs((h / 60) % 2 - 1)), m = v - c;
+  let r = 0, g = 0, b = 0;
+  if (h < 60) [r, g, b] = [c, x, 0]; else if (h < 120) [r, g, b] = [x, c, 0]; else if (h < 180) [r, g, b] = [0, c, x];
+  else if (h < 240) [r, g, b] = [0, x, c]; else if (h < 300) [r, g, b] = [x, 0, c]; else [r, g, b] = [c, 0, x];
+  const to = n => Math.round((n + m) * 255).toString(16).padStart(2, '0');
+  return ('#' + to(r) + to(g) + to(b)).toUpperCase();
+}
+function hexToHsv(hex) {
+  const r = parseInt(hex.slice(1, 3), 16) / 255, g = parseInt(hex.slice(3, 5), 16) / 255, b = parseInt(hex.slice(5, 7), 16) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
+  let h = 0;
+  if (d) { if (max === r) h = 60 * (((g - b) / d) % 6); else if (max === g) h = 60 * ((b - r) / d + 2); else h = 60 * ((r - g) / d + 4); }
+  if (h < 0) h += 360;
+  return { h: Math.round(h) % 360, s: max ? Math.round(d / max * 100) : 0, v: Math.round(max * 100) };
+}
+const isDarkNow = () => { const t = document.documentElement.dataset.theme; return t === 'dark' || (t !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches); };
+function previewHTML(k) {
+  const cell = (n, on, extra = '') => `<span class="pv-cell" style="${on ? `background:var(--${k === 'hol' ? 'fill' : k}-bg)` : 'background:var(--fill)'}"><b style="color:${on ? `var(--${k}-text)` : 'var(--label-3)'}">${n}</b>${extra}</span>`;
+  const days = [1, 2, 3, 4, 5, 6, 7];
+  if (k === 'day' || k === 'night') {
+    return `<div class="pv-row">${days.map(n => cell(n, n <= 5, n <= 5 ? `<i class="pv-bar" style="background:var(--${k})"></i>` : '')).join('')}</div>
+      <div class="pv-note" style="color:var(--${k}-text)">${k === 'day' ? 'Day shift' : 'Night shift'} · on hitch</div>`;
+  }
+  if (k === 'home') {
+    return `<div class="pv-row">${days.map(n => cell(n, n > 5)).join('')}</div>
+      <div class="pv-hero" style="background:linear-gradient(135deg,var(--hero-home-a),var(--hero-home-b))">Days off · Day 4 of 14</div>`;
+  }
+  if (k === 'accent') {
+    return `<div class="pv-row">${days.map(n => `<span class="pv-cell" style="background:var(--fill)"><b style="${n === 4 ? 'display:none' : ''}">${n}</b>${n === 4 ? '<span class="pv-today" style="background:var(--tint);color:var(--on-tint)">4</span>' : ''}</span>`).join('')}</div>
+      <div class="pv-btns"><span class="pv-btn" style="background:var(--tint);color:var(--on-tint)">Save</span><span class="pv-btn" style="background:var(--tint-soft);color:var(--tint-text)">Edit rates</span></div>`;
+  }
+  return `<div class="pv-row">${days.map(n => `<span class="pv-cell" style="background:var(--fill)"><b>${n}</b>${n === 6 ? '<span class="pv-hol" style="background:var(--hol);color:var(--hol-ink)">Thanks</span>' : ''}</span>`).join('')}</div>`;
+}
+function pickerBody() {
+  const label = (COLOR_ROWS.find(([k]) => k === PK.k) || [PK.k, PK.k])[1];
+  return `<div class="pk">
+    <div class="sec-h" style="padding-top:0">${label}</div>
+    <div class="pk-prev" id="pk-prev">${previewHTML(PK.k)}</div>
+    <div class="pk-hex"><span class="pk-sw" id="pk-sw"></span><b id="pk-hex"></b></div>
+    <div class="pk-sl"><span>Hue</span><input type="range" class="pk-r hue" min="0" max="359" step="1" value="${PK.h}" data-pk="h"></div>
+    <div class="pk-sl"><span>Saturation</span><input type="range" class="pk-r" id="pk-s" min="0" max="100" step="1" value="${PK.s}" data-pk="s"></div>
+    <div class="pk-sl"><span>Brightness</span><input type="range" class="pk-r" id="pk-v" min="0" max="100" step="1" value="${PK.v}" data-pk="v"></div>
+    <div class="pk-btns"><button type="button" class="btn gray" data-act="picker-back">Back</button><button type="button" class="btn primary" data-act="picker-apply">Use this color</button></div>
+    <button type="button" class="txt-btn" data-act="picker-default" style="width:100%;margin-top:6px">Reset to default</button>
+  </div>`;
+}
+function updatePicker() {
+  if (!PK) return;
+  const hex = hsvToHex(PK.h, PK.s, PK.v);
+  $('#pk-prev').setAttribute('style', colorTokens({ ...S.colors, [PK.k]: hex }, isDarkNow()));
+  $('#pk-hex').textContent = hex;
+  $('#pk-sw').style.background = hex;
+  $('#pk-s').style.background = `linear-gradient(to right, ${hsvToHex(PK.h, 0, PK.v)}, ${hsvToHex(PK.h, 100, PK.v)})`;
+  $('#pk-v').style.background = `linear-gradient(to right, #000, ${hsvToHex(PK.h, PK.s, 100)})`;
+}
+function openPicker(k) { PK = { k, ...hexToHsv(colorOf(k)) }; $('#sheet-body').innerHTML = pickerBody(); updatePicker(); }
+document.addEventListener('input', e => { const t = e.target; if (PK && t.dataset && t.dataset.pk) { PK[t.dataset.pk] = +t.value; updatePicker(); } });
+
 /* ───────── navigation ───────── */
-let tab = 'today';
+let tab = 'cal';
 const now0 = new Date();
 const cal = { y: now0.getFullYear(), m: now0.getMonth(), mode: 'month' };
 let holYear = now0.getFullYear();
@@ -599,56 +664,42 @@ function renderToday() {
   const now = new Date(), today = startOfDay(now), sch = me(), p = S.pattern, info = nowInfo(sch, now), on = info.phase === 'on';
   const cls = on ? (info.shift === 'night' ? 'night' : 'day') : 'home';
   $('#today-avatar').innerHTML = avInner(S);
-  let h = `<div class="eyebrow">${fmtLong(now)}</div><h1 class="lt">Today</h1>`;
+  const hk = toKey(on ? info.cs : info.until), full = fullPay(hk, p.daysOn), got = earnedPay(hk, on ? info.dayNum : 0, p.daysOn), mi = milesFor(hk);
+  const left = Math.max(info.total - info.dayNum, 0);
+  let h = `<div class="eyebrow">${fmtLong(now)}</div><h1 class="lt">Insights</h1>`;
   if (S.demo) h += `<button class="banner" data-act="demo-setup"><span>You're looking at a sample schedule.</span><b>Set up yours</b>${IC.chev}</button>`;
   h += `<div class="hero ${cls}">
     <div class="lab">${on ? `On hitch · ${shiftName(info.shift)}` : 'Days off'}</div>
     <div class="ring" role="img" aria-label="Day ${info.dayNum} of ${info.total}"><svg viewBox="0 0 60 60"><circle class="tr" cx="30" cy="30" r="26"/><circle class="ar" id="ring-arc" cx="30" cy="30" r="26" stroke-dasharray="${RC}" stroke-dashoffset="${RC * (1 - info.pct)}"/></svg><div class="mid"><b>${info.dayNum}</b><small>of ${info.total}</small></div></div>
     <div class="lead">${on ? 'Headed home in' : 'Back on hitch in'}</div>
     <div class="cd" data-cd="full">${cdHTML(info.ms, 'full')}</div>
-    <div class="sub">${fmtLong(info.until)} at ${fmtClock(info.until)}</div>
+    <div class="sub">${fmtDay(info.until)} at ${fmtClock(info.until)}</div>
   </div>`;
-
-  let nightSeen = false, strip = '';
-  for (let i = 0; i < 14; i++) {
-    const d = addDays(today, i), k = toKey(d), ci = cellInfo(k, sch);
-    const c = ci.type === 'on' ? (ci.shift === 'night' ? 'n' : 'd') : '';
-    if (c === 'n') nightSeen = true;
-    strip += dayCell(d, null, i % 7 === 0);
-  }
-  h += `<div class="sec-title">Next two weeks</div><div class="twoweek"><div class="dow">${Array.from({ length: 7 }, (_, i) => `<span>${DS[addDays(today, i).getDay()][0]}</span>`).join('')}</div><div class="tw-grid">${strip}</div></div>
-    <div class="legend"><span><i style="background:var(--day)"></i>${nightSeen ? 'Day shift' : 'On hitch'}</span>${nightSeen ? '<span><i style="background:var(--night)"></i>Night shift</span>' : ''}<span><i style="background:var(--fill-2)"></i>Days off</span></div>`;
-
-  const hk = toKey(on ? info.cs : info.until), full = fullPay(hk, p.daysOn), worked = on ? info.dayNum : 0, got = earnedPay(hk, worked, p.daysOn);
-  h += `<div class="sec-title">${on ? 'This hitch' : 'Next hitch'}</div><button class="card-btn" data-act="tab" data-tab="pay">
-    <div class="pay-line"><span class="big">${money(hasRates() ? (on ? got.total : full.total) : 0)}</span>${IC.chev}</div>
-    ${!hasRates() ? '<div class="cap"><span>Add your pay rates to see what each hitch earns</span></div>' : on ? `<div class="track"><i style="width:${Math.round(clamp(got.total / (full.total || 1)) * 100)}%"></i></div><div class="cap"><span>Earned so far</span><span>${money(full.total)} at hitch end</span></div>`
-      : `<div class="cap"><span>Estimate for ${plural(p.daysOn, 'day')}</span><span>Starts ${fmtDay(info.until)}</span></div>`}
-  </button>`;
 
   const items = [];
   transitions(sch, 3, now).forEach(t => items.push({
     date: t.date, c: t.type === 'on' ? (t.shift === 'night' ? 'var(--night)' : 'var(--day)') : 'var(--home)',
     ic: t.type === 'on' ? (t.shift === 'night' ? IC.moon : IC.sun) : IC.house,
-    title: t.type === 'on' ? `Back on hitch` : 'Days off start', sub: `${fmtDay(t.date)} at ${fmtClock(t.date)}`, tag: rel(t.date), k: toKey(t.date)
+    title: t.type === 'on' ? 'Back on hitch' : 'Days off start', sub: `${fmtDay(t.date)} at ${fmtClock(t.date)}`, tag: rel(t.date), k: toKey(t.date)
   }));
   S.certs.forEach(c => { const st = certState(c); if (st.n <= 60) items.push({ date: parseKey(c.expiry), c: st.n <= 30 ? 'var(--danger)' : 'var(--tint)', ic: IC.shield, title: c.name, sub: st.txt, chip: st.n <= 30 ? st.cls : '', tag: st.n < 0 ? 'Expired' : fmtMD(parseKey(c.expiry)), act: 'certs-open' }); });
   [now.getFullYear(), now.getFullYear() + 1].forEach(y => holidays(y).forEach(hd => {
     const n = daysBetween(today, hd.date);
-    if (n >= 0 && n <= 60) { const off = dayType(toKey(hd.date), sch) === 'off'; items.push({ date: hd.date, c: 'var(--tint)', ic: IC.flag, title: hd.name, sub: `${fmtDay(hd.date)} · ${off ? "You're off" : "You're on hitch"}`, tag: rel(hd.date), k: toKey(hd.date) }); }
+    if (n >= 0 && n <= 30) { const off = dayType(toKey(hd.date), sch) === 'off'; items.push({ date: hd.date, c: 'var(--tint)', ic: IC.flag, title: hd.name, sub: `${fmtDay(hd.date)} · ${off ? "You're off" : "You're on hitch"}`, tag: rel(hd.date), k: toKey(hd.date) }); }
   }));
   Object.keys(S.notes).forEach(k => { const n = daysBetween(today, parseKey(k)); if (n >= 0 && n <= 30) { const nt = S.notes[k]; items.push({ date: parseKey(k), emoji: nt.emoji || '📝', title: nt.text || 'Note', sub: fmtDay(parseKey(k)), tag: rel(parseKey(k)), k }); } });
   items.sort((a, b) => a.date - b.date);
-  h += `<div class="sec-title">Coming up</div><div class="group ic">${items.slice(0, 8).map(it => `<button class="row" data-act="${it.act || 'day'}" ${it.k ? `data-k="${it.k}"` : ''}>
+  h += `<div class="sec-title">Coming up</div>`;
+  h += items.length ? `<div class="group ic">${items.slice(0, 3).map(it => `<button class="row" data-act="${it.act || 'day'}" ${it.k ? `data-k="${it.k}"` : ''}>
     ${it.emoji ? `<span class="itile e">${esc(it.emoji)}</span>` : `<span class="itile" style="--c:${it.c}">${it.ic}</span>`}
-    <span class="t"><b>${esc(it.title)}</b><small>${esc(it.sub)}</small></span>${it.chip ? `<span class="chip ${it.chip}">${esc(it.tag)}</span>` : `<span class="v" style="font-size:15px">${esc(it.tag)}</span>`}</button>`).join('')}</div>`;
-
+    <span class="t"><b>${esc(it.title)}</b><small>${esc(it.sub)}</small></span>${it.chip ? `<span class="chip ${it.chip}">${esc(it.tag)}</span>` : `<span class="v" style="font-size:15px">${esc(it.tag)}</span>`}</button>`).join('')}</div>`
+    : '<p class="foot">Nothing due in the next 30 days.</p>';
   const y0 = now.getFullYear();
   if (holYear !== y0 && holYear !== y0 + 1) holYear = y0;
   const hs = holidays(holYear), offN = hs.filter(x => dayType(toKey(x.date), sch) === 'off').length;
   h += `<div class="sec-title">Holidays<span class="seg sm" data-change="hol-year"><button data-act="seg" data-val="${y0}" class="${holYear === y0 ? 'on' : ''}">${y0}</button><button data-act="seg" data-val="${y0 + 1}" class="${holYear === y0 + 1 ? 'on' : ''}">${y0 + 1}</button></span></div>
-    <div class="group">${hs.map(x => { const off = dayType(toKey(x.date), sch) === 'off'; return `<button class="row${off ? '' : ' dim'}" data-act="day" data-k="${toKey(x.date)}"><span class="t"><b>${esc(x.name)} <span class="mut" style="font-weight:400;font-size:15px">${fmtMD(x.date)}</span></b></span><span class="chip ${off ? 'c-home' : 'c-gray'}">${off ? 'Off' : 'On hitch'}</span></button>`; }).join('')}</div>
-    <p class="foot">You're home for ${offN} of ${hs.length} federal holidays in ${holYear}.</p>`;
+    <p class="foot" style="margin:-4px 0 10px;padding:0">Home for ${offN} of ${hs.length} federal holidays.</p>
+    <div class="hol-grid">${hs.map(x => { const off = dayType(toKey(x.date), sch) === 'off'; return `<button class="hol${off ? ' off' : ''}" data-act="day" data-k="${toKey(x.date)}"><b>${esc(x.name)}</b><small>${fmtMD(x.date)} · ${off ? 'Off' : 'On hitch'}</small></button>`; }).join('')}</div>`;
   $('#today-body').innerHTML = h;
 }
 
@@ -695,7 +746,7 @@ function dayCell(d, month, i0) {
       bars += `<span class="bar${s ? ' s' : ''}${e ? ' e' : ''}${named ? ' nm' : ''}" style="--i:${ri};--rc:${r.color};--ri:${inkFor(r.color)}">${named ? `<span>${esc(r.name.split(/\s+/)[0].slice(0, 12))}</span>` : ''}</span>`;
     });
     const label = `${fmtLong(d)}, ${ci.type === 'on' ? 'on hitch' : 'off'}${hol ? ', ' + hol : ''}`;
-    h += `<button class="${cls.join(' ')}" data-act="day" data-k="${k}" style="${style}" aria-label="${esc(label)}"><span class="bgl">${hol && HOLIDAY_SVG[hol] ? `<svg class="art" viewBox="0 0 100 130" preserveAspectRatio="xMidYMid meet" fill="currentColor" aria-hidden="true">${HOLIDAY_SVG[hol]}</svg>` : ''}</span><span class="dn">${d.getDate()}</span>${note ? (note.emoji ? `<span class="em">${esc(note.emoji)}</span>` : '<span class="nd"></span>') : ''}${certDays.has(k) ? `<span class="ce">${IC.alert}</span>` : ''}${bars}</button>`;
+    h += `<button class="${cls.join(' ')}" data-act="day" data-k="${k}" style="${style}" aria-label="${esc(label)}"><span class="bgl"></span><span class="dn">${d.getDate()}</span>${hol ? `<span class="hl">${esc(HOL_SHORT[hol] || hol)}</span>` : ''}${note ? (note.emoji ? `<span class="em">${esc(note.emoji)}</span>` : '<span class="nd"></span>') : ''}${certDays.has(k) ? `<span class="ce">${IC.alert}</span>` : ''}${bars}</button>`;
   }
   return h;
 }
@@ -907,7 +958,7 @@ function openRoster(id, pre) {
   const pat = r ? r.pattern : pre ? { daysOn: clampInt(pre.p.on, 1, 120), daysOff: clampInt(pre.p.off, 1, 120) } : { daysOn: 14, daysOff: 14 };
   openSheet({
     title: r ? 'Edit schedule' : 'Add a schedule', right: r ? 'Save' : 'Add',
-    body: `<div data-form="sc"><div class="group form" style="margin-top:6px"><label class="row"><span class="k">Name</span><input type="text" id="sc-name" placeholder="Sarah" maxlength="24" autocomplete="off" value="${esc(r ? r.name : pre ? pre.n || '' : '')}"></label></div>
+    body: `<div data-form="sc"><div class="group form" style="margin-top:6px"><label class="row"><span class="k">Name</span><input type="text" id="sc-name" placeholder="Jimmy" maxlength="24" autocomplete="off" value="${esc(r ? r.name : pre ? pre.n || '' : '')}"></label></div>
       <div class="sec-h">Icon</div>${avatarPicker('sc', r || { icon: pre ? pre.i : '' })}
       ${r ? '' : `<div class="sec-h">Have their HitchCal link?</div><div class="group form"><label class="row"><input type="text" id="sc-code" placeholder="Paste it here to fill everything in" autocomplete="off" style="text-align:left"></label></div>`}
       <div class="sec-h">Rotation</div>${rotationPart('sc', pat)}
@@ -1028,7 +1079,7 @@ function renderMore() {
   <div class="sec-h">Appearance</div>
   <div class="group ic"><div class="row"><span class="itile" style="--c:var(--night)">${IC.paint}</span><span class="t"><b>Theme</b></span><span class="seg sm" data-change="theme">${['system', 'light', 'dark'].map(t => `<button data-act="seg" data-val="${t}" class="${S.theme === t ? 'on' : ''}">${t === 'system' ? 'Auto' : t[0].toUpperCase() + t.slice(1)}</button>`).join('')}</span></div>
     <button class="row" data-act="colors-open"><span class="itile" style="--c:var(--tint)">${IC.star}</span><span class="t"><b>Colors and themes</b></span><span class="cdots">${COLOR_ROWS.map(([k]) => `<i style="background:${colorOf(k)}"></i>`).join('')}</span>${IC.chev}</button>
-    <div class="row"><span class="itile" style="--c:var(--tint)">${IC.flag}</span><span class="t"><b>Holiday artwork</b><small>Faint illustrations on calendar days</small></span><button class="switch${S.showHolidays ? ' on' : ''}" role="switch" aria-checked="${!!S.showHolidays}" aria-label="Holiday artwork" data-act="switch" data-change="toggle-hol"></button></div></div>
+    <div class="row"><span class="itile" style="--c:var(--tint)">${IC.flag}</span><span class="t"><b>Holiday labels</b><small>Name on each holiday's day</small></span><button class="switch${S.showHolidays ? ' on' : ''}" role="switch" aria-checked="${!!S.showHolidays}" aria-label="Holiday artwork" data-act="switch" data-change="toggle-hol"></button></div></div>
   <div class="sec-h">Your data</div>
   <div class="group ic"><button class="row" data-act="pdf-open"><span class="itile" style="--c:var(--danger)">${IC.cal}</span><span class="t"><b>Year calendar PDF</b><small>One page with your year and holidays, for family</small></span>${IC.chev}</button>
     <button class="row" data-act="export-ics"><span class="itile" style="--c:var(--day)">${IC.cal}</span><span class="t"><b>Export to a calendar app</b><small>A year of hitches as an .ics file</small></span>${IC.chev}</button>
@@ -1088,7 +1139,7 @@ function demoData() {
     ...d, setup: true, demo: true, name: 'Sample Hand', icon: 'worm',
     earnings: { ...d.earnings, dayRate: 750, hourlyRate: 45, perDiem: 75, mileageRate: 0.7, roundTrip: 280, travelRate: 750 }, hitchStart: toKey(addDays(t, -8)),
     certs: [{ id: uid(), name: 'H2S Alive', expiry: toKey(addDays(t, 24)) }, { id: uid(), name: 'First Aid / CPR', expiry: toKey(addDays(t, 210)) }],
-    rosters: [{ id: uid(), name: 'Sarah', icon: 'her', photo: '', hitchStart: toKey(addDays(t, -3)), color: COLORS[0], pattern: { daysOn: 7, daysOff: 7 } }],
+    rosters: [{ id: uid(), name: 'Jimmy', icon: 'worm', photo: '', hitchStart: toKey(addDays(t, -3)), color: COLORS[0], pattern: { daysOn: 7, daysOff: 7 } }],
     notes: { [toKey(addDays(t, 3))]: { text: "Mom's birthday", emoji: '🎂' } },
     bonuses: [{ id: uid(), label: 'Safety bonus', amount: 500, date: toKey(addDays(t, -30)) }]
   };
@@ -1134,7 +1185,7 @@ function obFinish() {
   if (!validKey(d.hitchStart)) return toast('Pick the first day of a hitch');
   if (S.demo || !S.setup) { const keep = S.theme, kc = S.colors; S = DEF(); S.theme = keep; S.colors = kc; }
   S.setup = true; S.demo = false; S.name = d.name; S.hitchStart = d.hitchStart; S.pattern = d.pattern; Object.assign(S, readAv('ob'));
-  save(); $('#onboard').hidden = true; showTab('today');
+  save(); $('#onboard').hidden = true; showTab('cal');
   if (pendingImport) { const pre = pendingImport; pendingImport = null; setTimeout(() => openRoster(null, pre), 350); }
 }
 
@@ -1158,6 +1209,10 @@ const A = {
   av: el => { const pfx = el.parentElement.dataset.pfx, s = pick[pfx]; s.mode = el.dataset.v ? 'icon' : 'init'; if (el.dataset.v) s.icon = el.dataset.v; el.parentElement.innerHTML = avOpts(pfx); },
   'av-photo': el => { const pfx = el.parentElement.dataset.pfx, s = pick[pfx]; if (s.photo && s.mode !== 'photo') { s.mode = 'photo'; el.parentElement.innerHTML = avOpts(pfx); return; } photoTarget = pfx; $('#photo-file').click(); },
   'colors-open': () => openColors(),
+  'picker-open': el => openPicker(el.dataset.k),
+  'picker-back': () => { PK = null; $('#sheet-body').innerHTML = colorsBody(); },
+  'picker-apply': () => { const k = PK.k, hex = hsvToHex(PK.h, PK.s, PK.v); PK = null; setColor(k, hex); },
+  'picker-default': () => { const k = PK.k; PK = null; setColor(k, DEFC[k]); },
   'theme-pick': el => { S.colors = { ...THEMES[+el.dataset.i][1] }; save(); applyColors(); render(); const b = $('#sheet-body'); b.innerHTML = colorsBody(); },
   'color-pick': el => setColor(el.dataset.k, el.dataset.c),
   'bonus-add': () => openBonus(null),
@@ -1202,7 +1257,7 @@ const A = {
   emoji: el => { const was = el.classList.contains('on'); $$('.emo', el.parentElement).forEach(s => s.classList.remove('on')); if (!was) el.classList.add('on'); },
   'ob-next': () => { if (obStep === 3) return obFinish(); obStep++; obShow(); },
   'ob-back': () => { if (obStep === 0) { if (S.setup) $('#onboard').hidden = true; return; } obStep--; obShow(); },
-  'ob-demo': () => { S = demoData(); save(); $('#onboard').hidden = true; showTab('today'); }
+  'ob-demo': () => { S = demoData(); save(); $('#onboard').hidden = true; showTab('cal'); }
 };
 function formChanged(el) {
   const form = el.closest('[data-form]'); if (!form) return;
@@ -1222,7 +1277,7 @@ $$('.scroll').forEach(sc => sc.addEventListener('scroll', () => sc.classList.tog
 $('#restore-file').addEventListener('change', e => {
   const f = e.target.files[0]; if (!f) return;
   const rd = new FileReader();
-  rd.onload = () => { try { const p = JSON.parse(rd.result); if (!p || !p.pattern || !validKey(p.hitchStart)) throw new Error('bad'); const keep = S.theme; S = normalize(p); S.setup = true; S.theme = p.theme || keep; save(); applyTheme(); applyColors(); showTab('today'); toast('Backup restored'); } catch (err) { toast("That file isn't a HitchCal backup"); } e.target.value = ''; };
+  rd.onload = () => { try { const p = JSON.parse(rd.result); if (!p || !p.pattern || !validKey(p.hitchStart)) throw new Error('bad'); const keep = S.theme; S = normalize(p); S.setup = true; S.theme = p.theme || keep; save(); applyTheme(); applyColors(); showTab('cal'); toast('Backup restored'); } catch (err) { toast("That file isn't a HitchCal backup"); } e.target.value = ''; };
   rd.readAsText(f);
 });
 
@@ -1267,7 +1322,7 @@ load(); applyTheme(); applyColors();
 pendingImport = parseShare(location.search);
 const famLink = parseFamily(location.search);
 if (famLink) showFamily(famLink, false);
-else if (S.setup) { showTab('today'); if (pendingImport) { const pre = pendingImport; pendingImport = null; setTimeout(() => openRoster(null, pre), 400); } }
+else if (S.setup) { showTab('cal'); if (pendingImport) { const pre = pendingImport; pendingImport = null; setTimeout(() => openRoster(null, pre), 400); } }
 else startOnboarding();
 setInterval(tick, 1000);
 if (!EMBEDDED && 'serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => { /* offline support is optional */ });

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+<defs>
+  <linearGradient id="kt" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2C2D31"/><stop offset="1" stop-color="#101012"/></linearGradient>
+  <linearGradient id="ke" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".22"/><stop offset=".35" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#fff" stop-opacity=".05"/></linearGradient>
+  <linearGradient id="kd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#16171A"/><stop offset="1" stop-color="#050506"/></linearGradient>
+</defs>
+<g transform="translate(512 512) scale(0.78) translate(-512 -512)">
+  <rect width="1024" height="1024" rx="0" fill="url(#kt)"/>
+  <rect x="7" y="7" width="1010" height="1010" rx="0" fill="none" stroke="url(#ke)" stroke-width="10"/>
+  <path d="M512 300 C512 300 368 472 368 580 A144 144 0 0 0 656 580 C656 472 512 300 512 300 Z" fill="#fff" fill-opacity=".10" transform="translate(0 10)"/>
+  <path d="M512 300 C512 300 368 472 368 580 A144 144 0 0 0 656 580 C656 472 512 300 512 300 Z" fill="url(#kd)"/>
+  <path d="M512 300 C512 300 368 472 368 580 A144 144 0 0 0 656 580 C656 472 512 300 512 300 Z" fill="none" stroke="#fff" stroke-opacity=".10" stroke-width="8" transform="translate(0 -3)"/>
+</g>
+</svg>

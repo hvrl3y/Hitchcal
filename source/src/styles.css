@@ -6,7 +6,7 @@
   --sep:rgba(60,60,67,.17);
   --label:#0B0B0F; --label-2:rgba(60,60,67,.68); --label-3:rgba(60,60,67,.36);
   --bar:rgba(247,247,250,.82);
-  --tint:#FF9F0A; --tint-text:#A85600; --on-tint:#1C1200; --tint-soft:rgba(255,159,10,.17);
+  --tint:#5B8DB8; --tint-text:#2F5F8C; --on-tint:#0B0B0D; --tint-soft:rgba(91,141,184,.17);
   --day:#007AFF; --day-text:#0060C7; --day-bg:rgba(0,122,255,.13);
   --night:#5856D6; --night-text:#4442B4; --night-bg:rgba(88,86,214,.16);
   --home:#34C759; --home-text:#1B7F37; --home-bg:rgba(52,199,89,.16);
@@ -209,7 +209,7 @@ button.row:active,.card-btn:active{background:var(--fill)}
 .cell.out{opacity:.38}
 .cell:active .bgl{filter:brightness(.93)}
 .cell:focus-visible{outline-offset:-2px}
-.cell .art{position:absolute;inset:0;width:100%;height:100%;color:var(--label);--cut:var(--cell);opacity:.1}
+.cell .hl{position:relative;z-index:1;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:7.5px;line-height:12px;font-weight:800;padding:0 3px;margin-top:1px;border-radius:999px;background:var(--hol);color:var(--hol-ink)}
 .cell .dn{position:relative;z-index:1;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
 .cell.d.full .dn,.cell.d.lead .dn{color:var(--day-text)}
 .cell.n.full .dn,.cell.n.lead .dn{color:var(--night-text)}
@@ -427,3 +427,35 @@ button.row:active,.card-btn:active{background:var(--fill)}
   .grab::after{display:none}
 }
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition-duration:.01ms!important}}
+
+/* Insights: compact holiday tiles */
+.hol-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.hol{display:block;text-align:left;background:var(--surface);border-radius:12px;padding:9px 11px;min-width:0;color:var(--label)}
+.hol b{display:block;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hol small{display:block;font-size:12px;color:var(--label-2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hol.off{box-shadow:inset 3px 0 0 var(--home)}
+.hol.off small{color:var(--home-text)}
+
+/* Color picker with live preview */
+.pk{padding:0 2px 12px}
+.pk-prev{background:var(--surface);border-radius:var(--r-card);padding:14px;display:grid;gap:10px;margin:0 0 12px}
+.pv-row{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+.pv-cell{position:relative;height:46px;border-radius:9px;padding:5px 6px;display:flex;flex-direction:column;justify-content:space-between;align-items:flex-start;overflow:hidden;min-width:0}
+.pv-cell b{font-size:13px;font-weight:600;color:var(--label)}
+.pv-bar{display:block;height:6px;border-radius:3px;margin:0 -6px -5px;width:calc(100% + 12px)}
+.pv-hol{font-size:8px;font-weight:800;border-radius:999px;padding:1px 4px;white-space:nowrap;align-self:flex-start}
+.pv-today{position:absolute;right:4px;top:4px;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:700}
+.pv-note{font-size:14px;font-weight:600}
+.pv-hero{border-radius:14px;padding:12px 14px;color:#fff;font-weight:700;font-size:15px}
+.pv-btns{display:flex;gap:8px}
+.pv-btn{border-radius:999px;padding:7px 14px;font-size:14px;font-weight:600}
+.pk-hex{display:flex;align-items:center;gap:10px;margin:0 2px 10px;font-size:15px}
+.pk-sw{width:26px;height:26px;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(0,0,0,.15)}
+.pk-sl{display:grid;gap:6px;margin:0 2px 14px;font-size:13px;color:var(--label-2)}
+.pk-r{-webkit-appearance:none;appearance:none;width:100%;height:28px;border-radius:14px;margin:0;outline:none}
+.pk-r.hue{background:linear-gradient(to right,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00)}
+.pk-r::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:28px;height:28px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.35)}
+.pk-r::-moz-range-thumb{width:28px;height:28px;border-radius:50%;background:#fff;border:0;box-shadow:0 1px 4px rgba(0,0,0,.35)}
+.pk-btns{display:grid;grid-template-columns:1fr 2fr;gap:8px}
+.pk-btns .btn{margin:0}
+

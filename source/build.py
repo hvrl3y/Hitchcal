@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-"""Assemble HitchCal from source/src into the site files at the repository root. Run: python3 source/build.py (needs Pillow)."""
-import base64, json, pathlib
-from PIL import Image, ImageDraw
+"""Assemble HitchCal: one artifact page for preview, and a deployable site folder."""
+import base64, json, pathlib, re, shutil, zipfile
 
 ROOT = pathlib.Path(__file__).parent
-SRC, OUT, DIST = ROOT / 'src', ROOT / 'build', ROOT.parent  # the site is written to the repository root, which GitHub Pages serves
+SRC, OUT, DIST = ROOT / 'src', ROOT / 'build', ROOT / 'dist'
+OLD_APP = pathlib.Path('/mnt/user-data/outputs/hitchcal-app.html')
 
-DARK = ("color-scheme:dark;--bg:#000000;--surface:#1C1C1E;--surface-up:#2C2C2E;--sheet:#1C1C1E;--cell:#1C1C1E;"
+DARK = ("color-scheme:dark;--bg:#000000;--surface:#1E1F23;--surface-up:#2C2D31;--sheet:#1E1F23;--cell:#1E1F23;"
         "--fill:rgba(120,120,128,.24);--fill-2:rgba(120,120,128,.38);--seg-on:#636366;--sep:rgba(84,84,88,.62);"
         "--label:#FFFFFF;--label-2:rgba(235,235,245,.64);--label-3:rgba(235,235,245,.3);--bar:rgba(20,20,22,.8);"
-        "--tint:#FF9F0A;--tint-text:#FFB340;--on-tint:#1C1200;--tint-soft:rgba(255,159,10,.2);"
+        "--tint:#5B8DB8;--tint-text:#8DB5DA;--on-tint:#0B0B0D;--tint-soft:rgba(91,141,184,.2);"
         "--day:#0A84FF;--day-text:#74B8FF;--day-bg:rgba(10,132,255,.27);"
         "--night:#5E5CE6;--night-text:#B0AEFF;--night-bg:rgba(94,92,230,.32);"
         "--home:#30D158;--home-text:#3DDC68;--home-bg:rgba(48,209,88,.18);"
@@ -21,18 +21,14 @@ FONTS = '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=I
 DESC = "Rotation schedule, countdown to days off and hitch pay for oilfield and rotation workers."
 
 
-def holiday_svg():
-    return (SRC / 'holidays.js').read_text(encoding='utf-8').strip()
-
-
 def build():
     css = (SRC / 'styles.css').read_text().replace('__DARK__', DARK)
     body = (SRC / 'body.html').read_text()
     avatars = sorted((SRC / 'avatars').glob('*.webp'))
-    js = (SRC / 'app.js').read_text().replace('/*__HOLIDAY_SVG__*/', holiday_svg())
+    js = (SRC / 'app.js').read_text()
     av_inline = 'const AVIMG = ' + json.dumps({a.stem: 'data:image/webp;base64,' + base64.b64encode(a.read_bytes()).decode() for a in avatars}) + ';'
     av_files = 'const AVIMG = ' + json.dumps({a.stem: f'avatars/{a.name}' for a in avatars}) + ';'
-    assert '__' not in css.replace('__hitchcal', '') and '/*__HOLIDAY_SVG__*/' not in js
+    assert '__' not in css.replace('__hitchcal', '')
 
     OUT.mkdir(exist_ok=True)
     page = (f'<title>HitchCal</title>\n<meta name="claude:viewport-fit-sides" content="cover">\n{FONTS}\n'
@@ -40,6 +36,9 @@ def build():
     (OUT / 'hitchcal.html').write_text(page, encoding='utf-8')
     (OUT / 'app.js').write_text(js.replace('/*__AVATARS__*/', av_files), encoding='utf-8')
 
+    if DIST.exists():
+        shutil.rmtree(DIST)
+    DIST.mkdir()
     head = f'''<!doctype html>
 <html lang="en">
 <head>
@@ -86,7 +85,7 @@ img{{max-width:100%}}
     }, indent=2))
 
     (DIST / 'sw.js').write_text('''// HitchCal offline support: try the network first so updates land, fall back to the saved copy on a bad signal.
-const CACHE = 'hitchcal-v3';
+const CACHE = 'hitchcal-v4';
 const SHELL = ['./', 'manifest.webmanifest', 'icon-192.png', 'favicon.svg'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL))); self.skipWaiting(); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k))))); self.clients.claim(); });
@@ -126,35 +125,17 @@ self.addEventListener('fetch', e => {
     (DIST / 'robots.txt').write_text('User-agent: *\nAllow: /\n')
     (DIST / 'jspdf.umd.min.js').write_bytes((ROOT / 'vendor' / 'jspdf.umd.min.js').read_bytes())  # jsPDF 2.5.1, MIT licence
     (DIST / '.nojekyll').write_text('')
-    (DIST / 'favicon.svg').write_text('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="15" fill="#FF9F0A"/><rect x="13" y="17" width="38" height="34" rx="7" fill="#1C1200"/><rect x="19" y="29" width="26" height="7" rx="3.5" fill="#FF9F0A"/><rect x="19" y="40" width="12" height="5" rx="2.5" fill="#FF9F0A" opacity=".55"/><rect x="22" y="11" width="5" height="11" rx="2.5" fill="#1C1200"/><rect x="37" y="11" width="5" height="11" rx="2.5" fill="#1C1200"/></svg>\n')
-    icons()
+    (DIST / 'favicon.svg').write_text((SRC / 'brand' / 'favicon.svg').read_text(encoding='utf-8'), encoding='utf-8')
+    for name in ('icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'apple-touch-icon.png'):
+        shutil.copy(SRC / 'brand' / name, DIST / name)
 
-    print('site written to', DIST)
-
-
-def icon(size, scale=1.0, rounded=False):
-    """The HitchCal mark. `scale` shrinks the glyph for maskable icons; `rounded` clips the tile for browser tabs."""
-    n = 1024
-    im = Image.new('RGBA', (n, n), (0, 0, 0, 0))
-    d = ImageDraw.Draw(im)
-    amber, ink = (255, 159, 10, 255), (28, 18, 0, 255)
-    d.rounded_rectangle([0, 0, n, n], radius=240 if rounded else 0, fill=amber)
-    u = n / 64 * scale
-    off = (n - 64 * u) / 2
-    r = lambda x, y, w, h, rad, fill: d.rounded_rectangle([off + x * u, off + y * u, off + (x + w) * u, off + (y + h) * u], radius=rad * u, fill=fill)
-    r(13, 17, 38, 34, 7, ink)
-    r(19, 29, 26, 7, 3.5, amber)
-    r(19, 40, 12, 5, 2.5, (255, 159, 10, 140))
-    r(22, 11, 5, 11, 2.5, ink)
-    r(37, 11, 5, 11, 2.5, ink)
-    return im.resize((size, size), Image.LANCZOS)
-
-
-def icons():
-    icon(192, rounded=True).save(DIST / 'icon-192.png')
-    icon(512, rounded=True).save(DIST / 'icon-512.png')
-    icon(512, scale=0.72).save(DIST / 'icon-maskable-512.png')
-    icon(180).convert('RGB').save(DIST / 'apple-touch-icon.png')
+    z = pathlib.Path('/mnt/user-data/outputs/hitchcal-site.zip')
+    with zipfile.ZipFile(z, 'w', zipfile.ZIP_DEFLATED) as f:
+        for p in sorted(DIST.iterdir()):
+            f.write(p, f'hitchcal-site/{p.name}')
+    print('artifact page:', (OUT / 'hitchcal.html').stat().st_size, 'bytes')
+    print('site files   :', ', '.join(sorted(p.name for p in DIST.iterdir())))
+    print('zip          :', z, z.stat().st_size, 'bytes')
 
 
 if __name__ == '__main__':

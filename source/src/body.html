@@ -4,7 +4,7 @@
     <section class="view" id="v-today" aria-label="Today">
       <div class="scroll">
         <header class="navbar"><div class="navbar-in wrap">
-          <span class="nav-sp"></span><span class="nav-title">Today</span>
+          <span class="nav-sp"></span><span class="nav-title">Insights</span>
           <button class="avatar" id="today-avatar" data-act="edit-hitch" aria-label="Edit my hitch"></button>
         </div></header>
         <div class="wrap" id="today-body"></div>
@@ -74,9 +74,22 @@
   </div>
 
   <nav class="tabbar" id="tabbar" aria-label="Sections">
-    <div class="brand"><svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="15" fill="var(--tint)"/><rect x="13" y="17" width="38" height="34" rx="7" fill="var(--on-tint)"/><rect x="19" y="29" width="26" height="7" rx="3.5" fill="var(--tint)"/><rect x="19" y="40" width="12" height="5" rx="2.5" fill="var(--tint)" opacity=".55"/><rect x="22" y="11" width="5" height="11" rx="2.5" fill="var(--on-tint)"/><rect x="37" y="11" width="5" height="11" rx="2.5" fill="var(--on-tint)"/></svg>HitchCal</div>
-    <button class="tab" data-act="tab" data-tab="today"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.5" r="7.5"/><path d="M12 9.5v4l2.6 2.4M9.5 3h5"/></svg>Today</button>
+    <div class="brand"><svg viewBox="0 0 1024 1024" aria-hidden="true">
+<defs>
+  <linearGradient id="tbt" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2C2D31"/><stop offset="1" stop-color="#101012"/></linearGradient>
+  <linearGradient id="tbe" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".22"/><stop offset=".35" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#fff" stop-opacity=".05"/></linearGradient>
+  <linearGradient id="tbd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#16171A"/><stop offset="1" stop-color="#050506"/></linearGradient>
+</defs>
+<g transform="translate(512 512) scale(1.0) translate(-512 -512)">
+  <rect width="1024" height="1024" rx="225" fill="url(#tbt)"/>
+  <rect x="7" y="7" width="1010" height="1010" rx="218" fill="none" stroke="url(#tbe)" stroke-width="10"/>
+  <path d="M512 300 C512 300 368 472 368 580 A144 144 0 0 0 656 580 C656 472 512 300 512 300 Z" fill="#fff" fill-opacity=".10" transform="translate(0 10)"/>
+  <path d="M512 300 C512 300 368 472 368 580 A144 144 0 0 0 656 580 C656 472 512 300 512 300 Z" fill="url(#tbd)"/>
+  <path d="M512 300 C512 300 368 472 368 580 A144 144 0 0 0 656 580 C656 472 512 300 512 300 Z" fill="none" stroke="#fff" stroke-opacity=".10" stroke-width="8" transform="translate(0 -3)"/>
+</g>
+</svg>HitchCal</div>
     <button class="tab" data-act="tab" data-tab="cal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="3.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>Calendar</button>
+    <button class="tab" data-act="tab" data-tab="today"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.5" r="7.5"/><path d="M12 9.5v4l2.6 2.4M9.5 3h5"/></svg>Insights</button>
     <button class="tab" data-act="tab" data-tab="pay"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M14.9 9.3c-.5-1-1.5-1.6-2.9-1.6-1.7 0-2.9.9-2.9 2.2 0 3 6 1.4 6 4.3 0 1.3-1.3 2.2-3.1 2.2-1.5 0-2.6-.6-3.1-1.7M12 5.9v1.8M12 16.4v1.7"/></svg>Pay</button>
     <button class="tab" data-act="tab" data-tab="crew"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8.5" r="3.3"/><path d="M2.8 19.2c.5-3.2 3-5 6.2-5s5.7 1.8 6.2 5M16 5.5a3.2 3.2 0 0 1 0 6M18.2 14.6c1.7.7 2.8 2.3 3.1 4.6"/></svg>Crew</button>
     <button class="tab" data-act="tab" data-tab="more"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="7.8" cy="12" r="1.15" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.15" fill="currentColor" stroke="none"/><circle cx="16.2" cy="12" r="1.15" fill="currentColor" stroke="none"/></svg>More</button>
