@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
 <defs>
-<linearGradient id="sqt" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5E6168"/><stop offset="1" stop-color="#2F3237"/></linearGradient>
+<linearGradient id="sqt" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8A8E95"/><stop offset="1" stop-color="#52565D"/></linearGradient>
 <linearGradient id="sqd" x1="0" y1="0" x2="1" y2="0.3"><stop offset="0" stop-color="#2A2C31"/><stop offset=".5" stop-color="#0B0B0C"/><stop offset="1" stop-color="#030304"/></linearGradient>
 <linearGradient id="sqh" gradientUnits="userSpaceOnUse" x1="492" y1="700" x2="392" y2="610"><stop offset="0" stop-color="#fff" stop-opacity=".85"/><stop offset=".5" stop-color="#fff" stop-opacity=".7"/><stop offset="1" stop-color="#fff" stop-opacity=".25"/></linearGradient>
 <clipPath id="sqc"><path d="M512 300 C512 300 368 472 368 580 A144 144 0 0 0 656 580 C656 472 512 300 512 300 Z"/></clipPath>
@@ -11,6 +11,7 @@
 <path d="M512 300 C512 300 368 472 368 580 A144 144 0 0 0 656 580 C656 472 512 300 512 300 Z" fill="#fff" fill-opacity=".16" transform="translate(0 8)"/>
 <path d="M512 300 C512 300 368 472 368 580 A144 144 0 0 0 656 580 C656 472 512 300 512 300 Z" fill="url(#sqd)"/>
 <path d="M512 300 C512 300 368 472 368 580 A144 144 0 0 0 656 580 C656 472 512 300 512 300 Z" fill="none" stroke="#000" stroke-opacity=".5" stroke-width="12" transform="translate(0 -4)" clip-path="url(#sqc)"/>
+<path d="M512 300 C512 300 368 472 368 580 A144 144 0 0 0 656 580 C656 472 512 300 512 300 Z" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width="10"/>
 <path d="M490.8 700.2 A122 122 0 0 1 394.1 611.6" fill="none" stroke="url(#sqh)" stroke-width="14" stroke-linecap="round"/>
 </g>
 </svg>
