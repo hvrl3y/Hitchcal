@@ -25,7 +25,9 @@ def build():
     css = (SRC / 'styles.css').read_text().replace('__DARK__', DARK)
     body = (SRC / 'body.html').read_text()
     avatars = sorted((SRC / 'avatars').glob('*.webp'))
-    js = (SRC / 'app.js').read_text()
+    legal = json.loads((SRC / 'legal.json').read_text(encoding='utf-8'))
+    js = (SRC / 'app.js').read_text().replace('/*__LEGAL__*/', 'const LEGAL = ' + json.dumps({k: legal[k] for k in ('privacy', 'terms')}) + ';')
+    assert 'const LEGAL' in js
     av_inline = 'const AVIMG = ' + json.dumps({a.stem: 'data:image/webp;base64,' + base64.b64encode(a.read_bytes()).decode() for a in avatars}) + ';'
     av_files = 'const AVIMG = ' + json.dumps({a.stem: f'avatars/{a.name}' for a in avatars}) + ';'
     assert '__' not in css.replace('__hitchcal', '')
@@ -85,7 +87,7 @@ img{{max-width:100%}}
     }, indent=2))
 
     (DIST / 'sw.js').write_text('''// HitchCal offline support: try the network first so updates land, fall back to the saved copy on a bad signal.
-const CACHE = 'hitchcal-v9';
+const CACHE = 'hitchcal-v10';
 const SHELL = ['./', 'manifest.webmanifest', 'icon-192.png', 'favicon.svg'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL))); self.skipWaiting(); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k))))); self.clients.claim(); });
@@ -125,6 +127,33 @@ self.addEventListener('fetch', e => {
     (DIST / 'robots.txt').write_text('User-agent: *\nAllow: /\n')
     (DIST / 'jspdf.umd.min.js').write_bytes((ROOT / 'vendor' / 'jspdf.umd.min.js').read_bytes())  # jsPDF 2.5.1, MIT licence
     (DIST / '.nojekyll').write_text('')
+    for slug, title in (('privacy', 'Privacy policy'), ('terms', 'Terms of use')):
+        (DIST / f'{slug}.html').write_text(f'''<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{title} · HitchCal</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<style>
+:root{{color-scheme:light;--bg:#EFF0F2;--card:#FFFFFF;--fg:#1C1D21;--muted:#5A5E66;--link:#24262A}}
+@media (prefers-color-scheme:dark){{:root{{color-scheme:dark;--bg:#000000;--card:#1E1F23;--fg:#F2F3F5;--muted:#A3A7AE;--link:#D9DCE1}}}}
+body{{margin:0;background:var(--bg);color:var(--fg);font:17px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,system-ui,sans-serif;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) 48px max(16px,env(safe-area-inset-left,0px))}}
+main{{max-width:680px;margin:0 auto;background:var(--card);border-radius:18px;padding:24px 22px}}
+h1{{font-size:28px;margin:0 0 4px;text-wrap:balance}}h3{{font-size:18px;margin:22px 0 4px}}
+p,ul{{margin:0 0 10px;color:var(--muted)}}ul{{padding-left:20px}}li{{margin-bottom:6px}}b{{color:var(--fg)}}
+.legal-date{{font-size:14px}}a{{color:var(--link);font-weight:600}}
+nav{{max-width:680px;margin:0 auto 14px}}
+</style>
+</head>
+<body>
+<nav><a href="./">← Back to HitchCal</a></nav>
+<main><h1>{title}</h1>
+{legal[slug]}
+</main>
+</body>
+</html>
+''', encoding='utf-8')
     (DIST / 'favicon.svg').write_text((SRC / 'brand' / 'favicon.svg').read_text(encoding='utf-8'), encoding='utf-8')
     for name in ('icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'apple-touch-icon.png'):
         shutil.copy(SRC / 'brand' / name, DIST / name)

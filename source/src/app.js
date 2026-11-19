@@ -1,6 +1,44 @@
 (() => {
 'use strict';
 
+/* ───────── launch config: fill these in before release ───────── */
+const CONFIG = {
+  supportEmail: '',     // where Send feedback goes, e.g. help@yourdomain.com; empty = diagnostics are copied instead
+  shareUrl: '',         // public link for Share HitchCal; empty = this page's address
+  sentryLoader: '',     // Sentry > Project settings > Loader Script URL; empty = crash reporting off
+  plausibleDomain: ''   // your site's domain in Plausible; empty = analytics off
+};
+const APP_VERSION = '2.1.0';
+const WHATS_NEW = [
+  ['Graphite look', 'A new icon and colors built around the brand. The old colors are still there as the Bright theme.'],
+  ['Text size', 'Make every screen easier to read in Settings.'],
+  ['Your calendar, your way', 'Start weeks on Monday, switch to 24-hour time, and pick kilometers or your currency.'],
+  ['Help and feedback', 'Answers to common questions, plus a quick way to send feedback or report a problem.'],
+  ['Privacy and terms', 'Plain-language privacy policy and terms of use in Settings.']
+];
+
+/* developer settings live apart from user data so backups never carry them */
+const DEVK = 'hitchcal_dev', ERRK = 'hitchcal_errors', RealDate = Date;
+let DEV = {}; try { DEV = JSON.parse(localStorage.getItem(DEVK) || '{}') || {}; } catch (e) { DEV = {}; }
+if (!DEV.flags || typeof DEV.flags !== 'object') DEV.flags = {};
+const saveDev = () => { try { localStorage.setItem(DEVK, JSON.stringify(DEV)); } catch (e) { /* storage unavailable */ } };
+/* time travel: shifts the app's clock for testing; set from the developer menu */
+if (+DEV.offset) {
+  const off = +DEV.offset;
+  class TravelDate extends RealDate { constructor(...a) { if (a.length) super(...a); else super(RealDate.now() + off); } static now() { return RealDate.now() + off; } }
+  window.Date = TravelDate;
+}
+const isPremium = () => !!DEV.flags.premium; // premium preview until payments exist
+/* local error log: the last 50 errors, shown in the developer menu and attached to feedback on request */
+let ERRS = []; try { ERRS = JSON.parse(localStorage.getItem(ERRK) || '[]') || []; } catch (e) { ERRS = []; }
+function logError(msg, where) {
+  ERRS.push({ t: new RealDate().toISOString(), v: APP_VERSION, m: String(msg).slice(0, 300), w: String(where || '').slice(0, 160) });
+  ERRS = ERRS.slice(-50);
+  try { localStorage.setItem(ERRK, JSON.stringify(ERRS)); } catch (e) { /* storage unavailable */ }
+}
+window.addEventListener('error', e => logError(e.message || 'Error', e.filename ? `${String(e.filename).split('/').pop()}:${e.lineno}:${e.colno}` : ''));
+window.addEventListener('unhandledrejection', e => logError('Unhandled promise: ' + ((e.reason && e.reason.message) || e.reason), ''));
+
 /* ───────── helpers ───────── */
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -9,7 +47,12 @@ const num = v => { const n = parseFloat(String(v).replace(/[^0-9.\-]/g, '')); re
 const clamp = (n, a = 0, b = 1) => Math.max(a, Math.min(b, n));
 const clampInt = (v, a, b) => clamp(Math.round(num(v)) || a, a, b);
 const pad = n => String(n).padStart(2, '0');
-const money = n => '$' + Math.round(n).toLocaleString('en-US');
+const CURRENCIES = [['USD', 'US dollar'], ['CAD', 'Canadian dollar'], ['AUD', 'Australian dollar'], ['GBP', 'British pound'], ['EUR', 'Euro'], ['NOK', 'Norwegian krone']];
+const curFmt = dp => { try { return new Intl.NumberFormat('en-US', { style: 'currency', currency: S.currency || 'USD', minimumFractionDigits: dp, maximumFractionDigits: dp }); } catch (e) { return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: dp, maximumFractionDigits: dp }); } };
+const money = (n, dp = 0) => curFmt(dp).format(dp ? n : Math.round(n));
+const curSym = () => (curFmt(0).formatToParts(0).find(p => p.type === 'currency') || { value: '$' }).value;
+const symFor = c => { try { return (new Intl.NumberFormat('en-US', { style: 'currency', currency: c }).formatToParts(0).find(p => p.type === 'currency') || { value: c }).value; } catch (e) { return c; } };
+const DU = () => S.dist === 'km' ? { u: 'km', w: 'kilometers', W: 'Kilometers', one: 'kilometer' } : { u: 'mi', w: 'miles', W: 'Miles', one: 'mile' };
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -28,7 +71,9 @@ const fmtMD = d => `${MS[d.getMonth()]} ${d.getDate()}`;
 const fmtDay = d => `${DS[d.getDay()]}, ${fmtMD(d)}`;
 const fmtLong = d => `${DOW[d.getDay()]}, ${MONTHS[d.getMonth()]} ${d.getDate()}`;
 const fmtFull = d => `${fmtMD(d)}, ${d.getFullYear()}`;
-const fmt12 = t => { const [h, m] = String(t || '06:00').split(':').map(Number); return `${h % 12 || 12}${m ? ':' + pad(m) : ''} ${h < 12 ? 'AM' : 'PM'}`; };
+const fmt12 = t => { const [h, m] = String(t || '06:00').split(':').map(Number); if (S.clock24) return `${pad(h)}:${pad(m || 0)}`; return `${h % 12 || 12}${m ? ':' + pad(m) : ''} ${h < 12 ? 'AM' : 'PM'}`; };
+const wsLead = d => (d.getDay() - (S.weekStart ? 1 : 0) + 7) % 7;
+const dowLetters = () => S.weekStart ? 'MTWTFSS' : 'SMTWTFS';
 const fmtClock = d => fmt12(pad(d.getHours()) + ':' + pad(d.getMinutes()));
 const rel = d => { const n = daysBetween(new Date(), d); return n === 0 ? 'Today' : n === 1 ? 'Tomorrow' : n === -1 ? 'Yesterday' : n > 0 ? `In ${n} days` : `${-n} days ago`; };
 const initials = n => (String(n || '').trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('') || 'H').toUpperCase();
@@ -36,6 +81,19 @@ const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
 
 const svg = (p, extra = '') => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" ${extra}>${p}</svg>`;
 const IC = {
+  textsize: svg('<path d="M4 18L9 6l5 12M5.6 14h6.8M15 18l3-7 3 7M15.9 16h4.2"/>'),
+  motion: svg('<path d="M3 12h3l2.5-6 4 12 3-9 1.5 3H21"/>'),
+  vibrate: svg('<rect x="8" y="3" width="8" height="18" rx="2"/><path d="M4 8v8M20 8v8"/>'),
+  week: svg('<rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4M7 14h2"/>'),
+  clock: svg('<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>'),
+  ruler: svg('<path d="M3 16.5L16.5 3 21 7.5 7.5 21z"/><path d="M7 12.5l1.5 1.5M9.5 10l2 2M12 7.5l1.5 1.5M14.5 5l2 2"/>'),
+  coin: svg('<circle cx="12" cy="12" r="8.5"/><path d="M14.5 9.2c-.5-.9-1.5-1.4-2.6-1.4-1.6 0-2.7.9-2.7 2.1 0 2.9 5.5 1.6 5.5 4.3 0 1.3-1.2 2.2-2.8 2.2-1.2 0-2.3-.6-2.8-1.6M12 6v1.8M12 16.4V18"/>'),
+  sparkle: svg('<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M18.5 15.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z"/>'),
+  help: svg('<circle cx="12" cy="12" r="8.5"/><path d="M9.6 9.4a2.5 2.5 0 0 1 4.8 1c0 1.7-2.4 2.1-2.4 3.6M12 17.2h.01"/>'),
+  mail: svg('<rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="M3.5 7l8.5 6 8.5-6"/>'),
+  lock: svg('<rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/>'),
+  doc: svg('<path d="M7 3h7l5 5v11.5a1.5 1.5 0 0 1-1.5 1.5h-10A1.5 1.5 0 0 1 6 19.5V4.5A1.5 1.5 0 0 1 7 3z"/><path d="M14 3v5h5M9 13h6M9 16.5h6"/>'),
+  wrench: svg('<path d="M14.7 6.3a4 4 0 0 0-5.4 5.1L3.5 17.2a1.8 1.8 0 0 0 2.5 2.5l5.8-5.8a4 4 0 0 0 5.1-5.4l-2.5 2.5-2.2-.5-.5-2.2z"/>'),
   chev: '<svg class="chev" viewBox="0 0 8 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l6 6-6 6"/></svg>',
   sun: svg('<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.5 1.5M17.2 17.2l1.5 1.5M5.3 18.7l1.5-1.5M17.2 6.8l1.5-1.5"/>'),
   moon: svg('<path d="M20 14.2A8.2 8.2 0 0 1 9.8 4a8.2 8.2 0 1 0 10.2 10.2z"/>'),
@@ -136,7 +194,8 @@ const DEF = () => ({
   setup: false, demo: false, name: '', icon: '', photo: '', hitchStart: '',
   pattern: { daysOn: 14, daysOff: 14, shiftType: 'day', startTime: '06:00', endTime: '18:00', alternating: false },
   earnings: { payType: 'dayrate', dayRate: 0, hourlyRate: 0, hoursPerShift: 12, otAfter: 8, perDiem: 0, mileageRate: 0, roundTrip: 0, travelDays: 0, travelRate: 0 },
-  bonuses: [], certs: [], notes: {}, rosters: [], hitchMiles: {}, colors: {}, theme: 'system', showHolidays: true
+  bonuses: [], certs: [], notes: {}, rosters: [], hitchMiles: {}, colors: {}, theme: 'system', showHolidays: true,
+  textSize: 'm', weekStart: 0, clock24: false, dist: 'mi', currency: 'USD', reduceMotion: false, haptics: true, seenVersion: ''
 });
 let S = DEF();
 
@@ -158,6 +217,11 @@ function normalize(p) {
     id: String(r.id || uid()).replace(/[^\w-]/g, ''), name: String(r.name), hitchStart: r.hitchStart, color: /^#[0-9a-f]{6}$/i.test(r.color || '') ? r.color : COLORS[0], icon: okIcon(r.icon), photo: okPhoto(r.photo),
     pattern: { daysOn: clampInt(r.pattern.daysOn, 1, 120), daysOff: clampInt(r.pattern.daysOff, 1, 120) }
   }));
+  if (!['m', 'l', 'xl'].includes(s.textSize)) s.textSize = 'm';
+  s.weekStart = s.weekStart ? 1 : 0; s.clock24 = !!s.clock24; s.reduceMotion = !!s.reduceMotion; s.haptics = s.haptics !== false;
+  if (s.dist !== 'km') s.dist = 'mi';
+  if (!CURRENCIES.some(([c]) => c === s.currency)) s.currency = 'USD';
+  s.seenVersion = String(s.seenVersion || '');
   if (!validKey(s.hitchStart)) s.setup = false;
   return s;
 }
@@ -397,8 +461,8 @@ function buildPdf(J, year) {
   for (let m = 0; m < 12; m++) {
     const x0 = M + (m % cols) * (mw + gap), y0 = top + Math.floor(m / cols) * mh;
     font(11, true); ink(17); doc.text(MONTHS[m], x0 + 2, y0);
-    font(6.5); ink(130); 'SMTWTFS'.split('').forEach((c, i) => doc.text(c, x0 + i * cw + cw / 2, y0 + 11, { align: 'center' }));
-    const lead = new Date(year, m, 1).getDay(), dim = new Date(year, m + 1, 0).getDate();
+    font(6.5); ink(130); dowLetters().split('').forEach((c, i) => doc.text(c, x0 + i * cw + cw / 2, y0 + 11, { align: 'center' }));
+    const lead = wsLead(new Date(year, m, 1)), dim = new Date(year, m + 1, 0).getDate();
     for (let d = 1; d <= dim; d++) {
       const idx = lead + d - 1, cx = x0 + (idx % 7) * cw, cy = y0 + 14 + Math.floor(idx / 7) * ch, k = `${year}-${pad(m + 1)}-${pad(d)}`, ci = cellInfo(k, sch), on = ci.type === 'on';
       if (on) { fill(ci.shift === 'night' ? cNight : cDay, .4); doc.roundedRect(cx + .8, cy + .8, cw - 1.600, ch - 1.600, 2, 2, 'F'); }
@@ -422,7 +486,7 @@ function openPdfSheet() {
   const y = new Date().getFullYear();
   openSheet({
     title: 'Year calendar PDF', left: 'Close',
-    body: `<p class="foot" style="margin:6px 4px 14px;font-size:15px">A one-page calendar of your year with every holiday marked as home or at work. Written in plain words, so family can read it without the app.</p>
+    body: `<p class="foot" style="margin:6px 4px 14px;font-size:calc(15px*var(--ts))">A one-page calendar of your year with every holiday marked as home or at work. Written in plain words, so family can read it without the app.</p>
       <div class="seg" id="pdf-year"><button type="button" data-act="seg" data-val="${y}" class="on">${y}</button><button type="button" data-act="seg" data-val="${y + 1}">${y + 1}</button></div>
       <button class="btn primary" data-act="pdf-make" style="margin-top:14px">${IC.down}Create PDF</button>`
   });
@@ -508,6 +572,14 @@ function closeAlert() { const w = $('#alert'); w.classList.remove('open'); clear
 
 /* ───────── theme ───────── */
 const hostTheme = document.documentElement.getAttribute('data-theme');
+function applyPrefs() {
+  const r = document.documentElement;
+  r.dataset.ts = S.textSize || 'm';
+  if (S.reduceMotion) r.setAttribute('data-rm', ''); else r.removeAttribute('data-rm');
+  if (DEV.flags.outline) r.setAttribute('data-outline', ''); else r.removeAttribute('data-outline');
+  const dow = $('#cal-dow'); if (dow) dow.innerHTML = dowLetters().split('').map(c => `<span>${c}</span>`).join('');
+}
+const buzz = () => { if (S.haptics !== false && navigator.vibrate) { try { navigator.vibrate(8); } catch (e) { /* not supported */ } } };
 function applyTheme() {
   const r = document.documentElement, t = S.theme;
   if (t === 'light' || t === 'dark') r.setAttribute('data-theme', t);
@@ -694,7 +766,7 @@ function renderToday() {
   h += `<div class="sec-title">Coming up</div>`;
   h += items.length ? `<div class="group ic">${items.slice(0, 3).map(it => `<button class="row" data-act="${it.act || 'day'}" ${it.k ? `data-k="${it.k}"` : ''}>
     ${it.emoji ? `<span class="itile e">${esc(it.emoji)}</span>` : `<span class="itile" style="--c:${it.c}">${it.ic}</span>`}
-    <span class="t"><b>${esc(it.title)}</b><small>${esc(it.sub)}</small></span>${it.chip ? `<span class="chip ${it.chip}">${esc(it.tag)}</span>` : `<span class="v" style="font-size:15px">${esc(it.tag)}</span>`}</button>`).join('')}</div>`
+    <span class="t"><b>${esc(it.title)}</b><small>${esc(it.sub)}</small></span>${it.chip ? `<span class="chip ${it.chip}">${esc(it.tag)}</span>` : `<span class="v" style="font-size:calc(15px*var(--ts))">${esc(it.tag)}</span>`}</button>`).join('')}</div>`
     : '<p class="foot">Nothing due in the next 30 days.</p>';
   const y0 = now.getFullYear();
   if (holYear !== y0 && holYear !== y0 + 1) holYear = y0;
@@ -719,7 +791,7 @@ function renderCal(dir) {
   else main.innerHTML = `<div class="cal-scroll">${listHTML()}</div>`;
 }
 function monthHTML(dir) {
-  const sch = me(), first = new Date(cal.y, cal.m, 1), lead = first.getDay(), dim = new Date(cal.y, cal.m + 1, 0).getDate();
+  const sch = me(), first = new Date(cal.y, cal.m, 1), lead = wsLead(first), dim = new Date(cal.y, cal.m + 1, 0).getDate();
   const total = Math.ceil((lead + dim) / 7) * 7, tk = todayKey();
   const certDays = new Set(S.certs.map(c => c.expiry));
   let h = `<div class="month${dir ? ' go-' + dir : ''}" id="month">`;
@@ -754,7 +826,7 @@ function dayCell(d, month, i0) {
 }
 function miniMonth(y, m) {
   const sch = me(), first = new Date(y, m, 1), dim = new Date(y, m + 1, 0).getDate(), tk = todayKey(), n = new Date();
-  let g = '<i></i>'.repeat(first.getDay());
+  let g = '<i></i>'.repeat(wsLead(first));
   for (let d = 1; d <= dim; d++) {
     const k = `${y}-${pad(m + 1)}-${pad(d)}`, ci = cellInfo(k, sch);
     g += `<i class="${k === tk ? 't' : ci.type === 'on' ? (ci.shift === 'night' ? 'n' : 'd') : ''}">${d}</i>`;
@@ -825,9 +897,9 @@ function openDay(k) {
 function renderPay() {
   const sch = me(), p = S.pattern, e = S.earnings, info = nowInfo(sch), on = info.phase === 'on', yr = new Date().getFullYear();
   const hk = toKey(on ? info.cs : info.until), full = fullPay(hk, p.daysOn), worked = on ? info.dayNum : 0, got = earnedPay(hk, worked, p.daysOn), show = on ? got : full, days = on ? worked : p.daysOn, tN = num(e.travelDays);
-  const yp = yearPay(yr), rate = e.payType === 'hourly' ? `$${num(e.hourlyRate)}/hr × ${num(e.hoursPerShift)} hrs` : `${money(num(e.dayRate))}/day`;
+  const yp = yearPay(yr), rate = e.payType === 'hourly' ? `${money(num(e.hourlyRate), 2)}/hr × ${num(e.hoursPerShift)} hrs` : `${money(num(e.dayRate))}/day`;
   let h = `<div class="eyebrow">${on ? `Day ${info.dayNum} of ${info.total}` : `Next hitch starts ${fmtMD(info.until)}`}</div><h1 class="lt">Pay</h1>
-  ${hasRates() ? '' : `<button class="banner" data-act="pay-edit"><span>Your pay rates aren't set yet, so everything shows $0.</span><b>Add rates</b>${IC.chev}</button>`}
+  ${hasRates() ? '' : `<button class="banner" data-act="pay-edit"><span>Your pay rates aren't set yet, so everything shows ${money(0)}.</span><b>Add rates</b>${IC.chev}</button>`}
   <div class="pcard"><div class="eyebrow">${on ? 'Earned this hitch' : 'Next hitch estimate'}</div><div class="big">${money(show.total)}</div>
     ${on ? `<div class="track"><i style="width:${Math.round(clamp(got.total / (full.total || 1)) * 100)}%"></i></div><div class="cap"><span>${plural(worked, 'day')} worked</span><span>${money(full.total)} at hitch end</span></div>` : `<div class="cap" style="margin-top:6px"><span>${plural(p.daysOn, 'day')} · ${esc(rate)}</span></div>`}
   </div>
@@ -835,33 +907,33 @@ function renderPay() {
     <div class="row"><span class="k">Base pay <span class="mut">· ${plural(days, 'day')} × ${money(dailyPay())}</span></span><span class="v">${money(show.base)}</span></div>
     <div class="row"><span class="k">Per diem <span class="mut">· ${money(num(e.perDiem))}/day</span></span><span class="v">${money(show.diem)}</span></div>
     ${tN ? `<div class="row"><span class="k">Travel days <span class="mut">· ${show.tn < tN ? `${show.tn} of ${tN}` : tN} × ${money(num(e.travelRate))}</span></span><span class="v">${money(show.travel)}</span></div>` : ''}
-    <button class="row" data-act="hitch-miles" data-k="${hk}"><span class="k">Mileage <span class="mut">· ${full.mi} mi this hitch</span></span><span class="v">${money(show.miles)}</span>${IC.chev}</button>
+    <button class="row" data-act="hitch-miles" data-k="${hk}"><span class="k">Mileage <span class="mut">· ${full.mi} ${DU().u} this hitch</span></span><span class="v">${money(show.miles)}</span>${IC.chev}</button>
   </div>
   <div class="sec-title">${yr} so far</div>
   <div class="tiles">
     <div class="tile"><small>Earned to date</small><b>${money(yp.ytd)}</b><span>${plural(yp.daysW, 'day')} worked</span></div>
     <div class="tile"><small>Full-year pace</small><b>${money(yp.proj)}</b><span>${plural(yp.daysAll, 'day')} scheduled</span></div>
   </div>
-  <div class="sec-title">Rates<button class="txt-btn" data-act="pay-edit" style="font-size:15px;font-weight:400;min-height:0">Edit</button></div>
+  <div class="sec-title">Rates<button class="txt-btn" data-act="pay-edit" style="font-size:calc(15px*var(--ts));font-weight:400;min-height:0">Edit</button></div>
   <button class="group" data-act="pay-edit" style="display:block;width:100%">
     <div class="row"><span class="k">${e.payType === 'hourly' ? 'Hourly rate' : 'Day rate'}</span><span class="v">${esc(rate)}</span></div>
     ${e.payType === 'hourly' ? `<div class="row"><span class="k">Overtime</span><span class="v">1.5× after ${num(e.otAfter)} hrs</span></div>` : ''}
     <div class="row"><span class="k">Per diem</span><span class="v">${money(num(e.perDiem))}/day</span></div>
     ${tN ? `<div class="row"><span class="k">Travel days</span><span class="v">${tN} per hitch · ${money(num(e.travelRate))}</span></div>` : ''}
-    <div class="row"><span class="k">Mileage</span><span class="v">$${num(e.mileageRate).toFixed(2)}/mi · ${num(e.roundTrip)} mi usual</span></div>
+    <div class="row"><span class="k">Mileage</span><span class="v">${money(num(e.mileageRate), 2)}/${DU().u} · ${num(e.roundTrip)} ${DU().u} usual</span></div>
   </button>
-  <div class="sec-title">Bonuses<button class="txt-btn" data-act="bonus-add" style="font-size:15px;font-weight:400;min-height:0">Add</button></div>`;
+  <div class="sec-title">Bonuses<button class="txt-btn" data-act="bonus-add" style="font-size:calc(15px*var(--ts));font-weight:400;min-height:0">Add</button></div>`;
   const bon = [...S.bonuses].sort((a, b) => (a.date < b.date ? 1 : -1));
   h += bon.length ? `<div class="group ic">${bon.map(b => `<button class="row" data-act="bonus-edit" data-id="${b.id}"><span class="itile" style="--c:var(--home)">${IC.star}</span><span class="t"><b>${esc(b.label || 'Bonus')}</b><small>${validKey(b.date) ? fmtFull(parseKey(b.date)) : ''}</small></span><span class="v">${money(num(b.amount))}</span>${IC.chev}</button>`).join('')}</div>`
     : `<div class="group"><button class="row" data-act="bonus-add"><span class="t"><b>No bonuses yet</b><small>Safety bonuses, completion pay and other one-offs count toward your year.</small></span>${IC.chev}</button></div>`;
   const past = yp.hs.filter(x => x.status !== 'next').reverse(), next = yp.hs.filter(x => x.status === 'next');
-  h += `<div class="sec-title">Hitches in ${yr}</div><div class="group">${past.map(x => { const pay = earnedPay(x.key, x.worked, x.days).total, own = S.hitchMiles[x.key] != null; return `<button class="row" data-act="hitch-miles" data-k="${x.key}"><span class="t"><b>${fmtMD(x.first)} – ${fmtMD(x.last)}</b><small>${x.status === 'now' ? `In progress · ${x.worked} of ${plural(x.days, 'day')}` : plural(x.days, 'day')} · ${milesFor(x.key)} mi${own ? ' (edited)' : ''}</small></span>${x.status === 'now' ? '<span class="chip c-day">Now</span>' : ''}<span class="v">${money(pay)}</span>${IC.chev}</button>`; }).join('')}
+  h += `<div class="sec-title">Hitches in ${yr}</div><div class="group">${past.map(x => { const pay = earnedPay(x.key, x.worked, x.days).total, own = S.hitchMiles[x.key] != null; return `<button class="row" data-act="hitch-miles" data-k="${x.key}"><span class="t"><b>${fmtMD(x.first)} – ${fmtMD(x.last)}</b><small>${x.status === 'now' ? `In progress · ${x.worked} of ${plural(x.days, 'day')}` : plural(x.days, 'day')} · ${milesFor(x.key)} ${DU().u}${own ? ' (edited)' : ''}</small></span>${x.status === 'now' ? '<span class="chip c-day">Now</span>' : ''}<span class="v">${money(pay)}</span>${IC.chev}</button>`; }).join('')}
     ${next.length ? `<div class="row"><span class="t"><b>${plural(next.length, 'hitch').replace('hitchs', 'hitches')} still to come</b><small>${fmtMD(next[0].first)} onward</small></span><span class="v">${money(next.reduce((a, x) => a + fullPay(x.key, x.days).total, 0))}</span></div>` : ''}
     ${!past.length && !next.length ? '<div class="row"><span class="t"><small>No hitches fall in this year.</small></span></div>' : ''}</div>
-  <p class="foot">Tap a hitch to change its miles. Estimates are gross pay before taxes and deductions.</p>`;
+  <p class="foot">Tap a hitch to change its ${DU().w}. Estimates are gross pay before taxes and deductions.</p>`;
   $('#pay-body').innerHTML = h;
 }
-const fRow = (label, id, val, affix = '$', mode = 'decimal') => `<label class="row"><span class="k">${label}</span>${affix ? `<span class="affix">${affix}</span>` : ''}<input type="text" inputmode="${mode}" id="${id}" value="${esc(val)}" autocomplete="off"></label>`;
+const fRow = (label, id, val, affix = curSym(), mode = 'decimal') => `<label class="row"><span class="k">${label}</span>${affix ? `<span class="affix">${affix}</span>` : ''}<input type="text" inputmode="${mode}" id="${id}" value="${esc(val)}" autocomplete="off"></label>`;
 function openPayEdit() {
   const e = S.earnings;
   openSheet({
@@ -874,8 +946,8 @@ function openPayEdit() {
       <div class="sec-h">Paid travel days per hitch</div><div class="seg" id="pe-tn" data-change="pay-travel">${[0, 1, 2].map(n => `<button type="button" data-act="seg" data-val="${n}" class="${num(e.travelDays) === n ? 'on' : ''}">${n === 0 ? 'None' : n === 1 ? '1 day' : '2 days'}</button>`).join('')}</div>
       <div class="group form" id="pe-trg" style="margin-top:10px" ${num(e.travelDays) ? '' : 'hidden'}>${fRow('Travel day rate', 'pe-tr', e.travelRate)}</div>
       <p class="foot">Paid on top of your days on hitch. Two days covers the trip out and the trip home.</p>
-      <div class="sec-h">Mileage</div><div class="group form">${fRow('Rate per mile', 'pe-mi', e.mileageRate)}${fRow('Usual round-trip miles', 'pe-rt', e.roundTrip, '')}</div>
-      <p class="foot">Paid once per hitch. If a hitch has different miles, tap that hitch on the Pay screen to change it.</p>`,
+      <div class="sec-h">Mileage</div><div class="group form">${fRow(`Rate per ${DU().one}`, 'pe-mi', e.mileageRate)}${fRow(`Usual round-trip ${DU().w}`, 'pe-rt', e.roundTrip, '')}</div>
+      <p class="foot">Paid once per hitch. If a hitch has different ${DU().w}, tap that hitch on the Pay screen to change it.</p>`,
     onPrimary() {
       const v = id => Math.max(0, num($('#' + id).value));
       S.earnings = { payType: segVal($('#pe-type')), dayRate: v('pe-dayrate'), hourlyRate: v('pe-hourly'), hoursPerShift: v('pe-hours'), otAfter: v('pe-ot'), perDiem: v('pe-diem'), mileageRate: v('pe-mi'), roundTrip: v('pe-rt'), travelDays: clamp(+segVal($('#pe-tn')) || 0, 0, 2), travelRate: v('pe-tr') };
@@ -888,9 +960,9 @@ function openMiles(key) {
   const p = S.pattern, e = S.earnings, cs = parseKey(key), own = S.hitchMiles[key] != null;
   openSheet({
     title: `${fmtMD(cs)} – ${fmtMD(addDays(cs, p.daysOn - 1))}`, right: 'Save',
-    body: `<div class="sec-h">Miles driven for this hitch</div><div class="group form">${fRow('Round-trip miles', 'hm-mi', milesFor(key), '')}</div>
-      <p class="foot">Your usual round trip is ${num(e.roundTrip)} mi. Mileage pays $${num(e.mileageRate).toFixed(2)} a mile, so this hitch comes to ${money(num(e.mileageRate) * milesFor(key))}.</p>
-      ${own ? '<button class="btn gray" data-act="miles-reset" style="margin-top:20px">Use my usual miles</button>' : ''}`,
+    body: `<div class="sec-h">${DU().W} driven for this hitch</div><div class="group form">${fRow(`Round-trip ${DU().w}`, 'hm-mi', milesFor(key), '')}</div>
+      <p class="foot">Your usual round trip is ${num(e.roundTrip)} ${DU().u}. Mileage pays ${money(num(e.mileageRate), 2)} a ${DU().one}, so this hitch comes to ${money(num(e.mileageRate) * milesFor(key))}.</p>
+      ${own ? '<button class="btn gray" data-act="miles-reset" style="margin-top:20px">Use my usual ${DU().w}</button>' : ''}`,
     onOpen(body) { body.dataset.k = key; },
     onPrimary() {
       const v = Math.max(0, num($('#hm-mi').value));
@@ -1013,8 +1085,8 @@ function showFamily(d, preview) {
 }
 function closeFamily() { FAM = null; $('#family').hidden = true; $('#app').hidden = false; render(); }
 function famMonth() {
-  const { y, m } = famCal, sch = FAM.sch, lead = new Date(y, m, 1).getDay(), dim = new Date(y, m + 1, 0).getDate(), tk = todayKey();
-  let h = 'SMTWTFS'.split('').map(c => `<small>${c}</small>`).join('') + '<i></i>'.repeat(lead);
+  const { y, m } = famCal, sch = FAM.sch, lead = wsLead(new Date(y, m, 1)), dim = new Date(y, m + 1, 0).getDate(), tk = todayKey();
+  let h = dowLetters().split('').map(c => `<small>${c}</small>`).join('') + '<i></i>'.repeat(lead);
   for (let d = 1; d <= dim; d++) {
     const k = `${y}-${pad(m + 1)}-${pad(d)}`, ci = cellInfo(k, sch), away = ci.type === 'on' || ci.tail, hol = holidayOn(k);
     const style = away ? `--a:${(ci.a * 100).toFixed(1)}%;--b:${(ci.b * 100).toFixed(1)}%` : '';
@@ -1073,23 +1145,121 @@ async function shareFamily() {
 }
 
 /* ───────── Settings + Certifications ───────── */
+const FAQ = [["Where is my information kept?", "On this phone only, in your browser's storage. There's no account and nothing is uploaded. Use Back up in Settings to save a copy."], ["How do I move HitchCal to a new phone?", "On the old phone, tap Back up in Settings and send the file to yourself. On the new phone, open HitchCal and tap Restore from a backup."], ["How do I put HitchCal on my home screen?", "iPhone: open it in Safari, tap Share, then Add to Home Screen. Android: open it in Chrome, tap the menu, then Install app."], ["Does it work without signal?", "Yes. After you open it once with signal, the calendar, countdown and pay work offline."], ["How is my pay worked out?", "Your day rate (or hourly rate times hours) for each day worked, plus per diem, mileage for the trip and any paid travel days. It's an estimate of gross pay before taxes."], ["What happens with night shifts that cross midnight?", "The calendar splits those days, so you can see where one shift ends and days off begin."], ["How do I share my schedule with family?", "Use Share with family. It sends a link that opens a read-only calendar of your hitches and days off. The schedule travels inside the link; nothing is stored online."], ["Can I follow a crew member's schedule?", "Yes. Add their schedule on the Crew tab, or open a crew link they send you. Their hitches show as a colored line on your calendar."]];
+/*__LEGAL__*/
+const openCurrency = () => openSheet({ title: 'Currency', left: 'Done', body: `<div class="group">${CURRENCIES.map(([c, n]) => `<button class="row" data-act="currency-pick" data-c="${c}"><span class="t"><b>${n}</b><small>${c} · ${symFor(c)}</small></span>${S.currency === c ? '<span class="tick">✓</span>' : ''}</button>`).join('')}</div><p class="foot">Changes how amounts are shown. It doesn't convert your rates.</p>` });
+const openWhatsNew = () => openSheet({ title: "What's new", left: 'Done', body: `<p class="wn-v">Version ${APP_VERSION}</p><div class="wn">${WHATS_NEW.map(([t, d]) => `<div class="wn-i"><span class="wn-ic">${IC.sparkle}</span><div><b>${esc(t)}</b><p>${esc(d)}</p></div></div>`).join('')}</div>` });
+const openFaq = () => openSheet({ title: 'Help and FAQ', left: 'Done', body: `<div class="faq">${FAQ.map(([q, ans]) => `<details><summary>${esc(q)}</summary><p>${esc(ans)}</p></details>`).join('')}</div><p class="foot">Still stuck? Use Send feedback in Settings.</p>` });
+function diag() {
+  let used = 0; try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); used += k.length + (localStorage.getItem(k) || '').length; } } catch (e) { used = -1; }
+  const p = S.pattern, installed = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone;
+  return [`HitchCal ${APP_VERSION}`, `Date: ${new Date().toString()}${DEV.offset ? ' (time travel on)' : ''}`, `Device: ${navigator.userAgent}`,
+    `Screen: ${screen.width}x${screen.height} @${window.devicePixelRatio}x, window ${innerWidth}x${innerHeight}, installed: ${installed ? 'yes' : 'no'}`,
+    `Storage used: ${used < 0 ? 'unavailable' : Math.round(used / 1024) + ' KB'}`,
+    `Schedule: ${p.daysOn}/${p.daysOff}, ${p.alternating ? 'alternating' : p.shiftType}, starts ${S.hitchStart || 'not set'}`,
+    `Settings: theme ${S.theme}, text ${S.textSize}, week ${S.weekStart ? 'Mon' : 'Sun'}, ${S.clock24 ? '24h' : '12h'}, ${S.dist}, ${S.currency}, crew ${S.rosters.length}, certs ${S.certs.length}`,
+    `Errors logged: ${ERRS.length}`, ...ERRS.slice(-10).map(e => `  ${e.t} v${e.v} ${e.m}${e.w ? ' @ ' + e.w : ''}`)].join('\n');
+}
+function openFeedback() {
+  const has = !!CONFIG.supportEmail;
+  openSheet({ title: 'Send feedback', left: 'Done', body: `<p class="foot" style="margin:4px 4px 14px">Tell us what you'd change, what's missing, or what went wrong. Device details help us fix problems faster; you can see exactly what's included below.</p>
+    ${has ? `<button class="btn primary" data-act="feedback-mail">${IC.mail}Email support</button>` : '<p class="foot" style="margin:0 4px 12px">Email support isn&#39;t set up yet. While HitchCal is in testing, copy the details and send them to the developer.</p>'}
+    <button class="btn gray" data-act="diag-copy" style="margin-top:10px">Copy device details</button>
+    <div class="sec-h">Included device details</div><pre class="diag">${esc(diag())}</pre>` });
+}
+function mailSupport() {
+  const subject = `HitchCal feedback (${APP_VERSION})`, body = `\n\n\n---\nDevice details (helps us fix problems):\n${diag()}`;
+  location.href = `mailto:${CONFIG.supportEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+async function shareApp() {
+  const url = CONFIG.shareUrl || (location.protocol.startsWith('http') ? location.origin + location.pathname : ''), text = 'The hitch calendar I use: countdown to days off, hitch pay and crew schedules.';
+  track('Share app');
+  if (navigator.share && !EMBEDDED) { try { await navigator.share({ title: 'HitchCal', text, url: url || undefined }); return; } catch (e) { if (e && e.name === 'AbortError') return; } }
+  copyText(url ? `${text} ${url}` : text, url ? 'Link copied' : 'Copied');
+}
+const openLegal = doc => openSheet({ title: doc === 'terms' ? 'Terms of use' : 'Privacy policy', left: 'Done', body: `<div class="legal">${LEGAL[doc === 'terms' ? 'terms' : 'privacy']}</div>` });
+let aboutTaps = 0, aboutT;
+function aboutTap() {
+  clearTimeout(aboutT); aboutT = setTimeout(() => { aboutTaps = 0; }, 2500);
+  if (DEV.enabled) { if (++aboutTaps >= 3) { aboutTaps = 0; openDev(); } return; }
+  aboutTaps++;
+  if (aboutTaps >= 3 && aboutTaps < 7) toast(`${7 - aboutTaps} more taps to turn on developer tools`);
+  if (aboutTaps >= 7) { aboutTaps = 0; DEV.enabled = true; saveDev(); buzz(); toast('Developer tools are on'); render(); }
+}
+const SAMPLES = [['14/14 days', { daysOn: 14, daysOff: 14, shiftType: 'day', alternating: false, startTime: '06:00', endTime: '18:00' }],
+  ['21/7 days', { daysOn: 21, daysOff: 7, shiftType: 'day', alternating: false, startTime: '06:00', endTime: '18:00' }],
+  ['7/7 days and nights', { daysOn: 7, daysOff: 7, shiftType: 'day', alternating: true, startTime: '06:00', endTime: '18:00' }],
+  ['28/28 nights', { daysOn: 28, daysOff: 28, shiftType: 'night', alternating: false, startTime: '18:00', endTime: '06:00' }],
+  ['20/10 days', { daysOn: 20, daysOff: 10, shiftType: 'day', alternating: false, startTime: '06:00', endTime: '18:00' }],
+  ['2/1 nights (edge case)', { daysOn: 2, daysOff: 1, shiftType: 'night', alternating: false, startTime: '19:00', endTime: '07:00' }]];
+function openDev() {
+  const days = DEV.offset ? Math.round(DEV.offset / 864e5) : 0;
+  openSheet({ title: 'Developer', left: 'Done', body: `
+    <div class="sec-h" style="padding-top:0">Time travel</div>
+    <div class="group form"><label class="row"><span class="k">Pretend today is</span><input type="date" id="dv-date" value="${todayKey()}"></label></div>
+    <p class="foot">${days ? `The clock is shifted ${Math.abs(days)} day${Math.abs(days) === 1 ? '' : 's'} ${days > 0 ? 'ahead' : 'back'}.` : 'Using the real date.'} The app reloads when you change it.</p>
+    <div class="dev-btns"><button class="btn primary" data-act="dev-travel">Travel</button><button class="btn gray" data-act="dev-travel-off"${days ? '' : ' disabled'}>Real date</button></div>
+    <div class="sec-h">Sample schedules</div>
+    <div class="chips">${SAMPLES.map(([n], i) => `<button type="button" class="pchip" data-act="dev-sample" data-i="${i}">${n}</button>`).join('')}</div>
+    <p class="foot">Replaces your pattern and starts the hitch 3 days ago. Back up first if you need your real schedule.</p>
+    <div class="sec-h">Feature flags</div>
+    <div class="group"><div class="row"><span class="t"><b>Premium preview</b><small>Treat this device as premium</small></span><button class="switch${DEV.flags.premium ? ' on' : ''}" role="switch" aria-checked="${!!DEV.flags.premium}" aria-label="Premium preview" data-act="switch" data-change="dev-flag-premium"></button></div>
+      <div class="row"><span class="t"><b>Layout outlines</b><small>Outline every element</small></span><button class="switch${DEV.flags.outline ? ' on' : ''}" role="switch" aria-checked="${!!DEV.flags.outline}" aria-label="Layout outlines" data-act="switch" data-change="dev-flag-outline"></button></div></div>
+    <div class="sec-h">Diagnostics</div>
+    <pre class="diag" id="dv-diag">${esc(diag())}</pre>
+    <div class="dev-btns"><button class="btn gray" data-act="diag-copy">Copy</button><button class="btn gray" data-act="dev-errors-clear"${ERRS.length ? '' : ' disabled'}>Clear errors (${ERRS.length})</button></div>
+    <div class="sec-h">Reset</div>
+    <div class="group"><button class="row" data-act="dev-cache"><span class="t"><b>Clear cache and reload</b><small id="dv-cache">Offline cache</small></span>${IC.chev}</button>
+      <button class="row" data-act="dev-onboard"><span class="t"><b>Run onboarding again</b></span>${IC.chev}</button>
+      <button class="row" data-act="dev-throw"><span class="t"><b>Log a test error</b></span>${IC.chev}</button>
+      <button class="row red" data-act="dev-off">Turn off developer tools</button></div>`,
+    onOpen: () => { if (window.caches) caches.keys().then(ks => { const el = $('#dv-cache'); if (el) el.textContent = ks.length ? `Offline cache: ${ks.join(', ')}` : 'No offline cache on this page'; }).catch(() => { }); } });
+}
+function travelTo(key) {
+  if (!key) { delete DEV.offset; } else { const t = parseKey(key), now = new RealDate(); t.setHours(now.getHours(), now.getMinutes(), now.getSeconds()); DEV.offset = t.getTime() - RealDate.now(); }
+  saveDev(); location.reload();
+}
+function showUpdate() { const u = $('#upd'); if (u) u.hidden = false; }
+function loadServices() {
+  if (EMBEDDED) return;
+  if (CONFIG.sentryLoader) { const sc = document.createElement('script'); sc.src = CONFIG.sentryLoader; sc.crossOrigin = 'anonymous'; document.head.appendChild(sc); }
+  if (CONFIG.plausibleDomain) { const sc = document.createElement('script'); sc.defer = true; sc.dataset.domain = CONFIG.plausibleDomain; sc.src = 'https://plausible.io/js/script.js'; document.head.appendChild(sc); }
+}
+function track(ev) { try { if (window.plausible) window.plausible(ev); } catch (e) { /* analytics is optional */ } }
+
 function renderMore() {
   const p = S.pattern, exp = S.certs.filter(c => certState(c).n <= 30).length;
   $('#more-body').innerHTML = `<h1 class="lt">Settings</h1>
-  <div class="group"><button class="row" data-act="edit-hitch" style="padding-block:12px"><span class="avatar lg">${avInner(S)}</span><span class="t"><b style="font-size:20px;font-weight:700">${esc(S.name || 'My hitch')}</b><small>${patText(p)} · ${p.alternating ? 'Days and nights' : shiftName(p.shiftType)} · ${fmt12(p.startTime)} to ${fmt12(p.endTime)}</small></span>${IC.chev}</button></div>
+  <div class="group"><button class="row" data-act="edit-hitch" style="padding-block:12px"><span class="avatar lg">${avInner(S)}</span><span class="t"><b style="font-size:calc(20px*var(--ts));font-weight:700">${esc(S.name || 'My hitch')}</b><small>${patText(p)} · ${p.alternating ? 'Days and nights' : shiftName(p.shiftType)} · ${fmt12(p.startTime)} to ${fmt12(p.endTime)}</small></span>${IC.chev}</button></div>
   <div class="group ic" style="margin-top:20px"><button class="row" data-act="certs-open"><span class="itile" style="--c:var(--home)">${IC.shield}</span><span class="t"><b>Certifications</b></span>${exp ? `<span class="chip c-warn">${exp} need${exp === 1 ? 's' : ''} attention</span>` : `<span class="v">${S.certs.length || 'None'}</span>`}${IC.chev}</button></div>
   <div class="sec-h">Appearance</div>
   <div class="group ic"><div class="row"><span class="itile" style="--c:var(--night)">${IC.paint}</span><span class="t"><b>Theme</b></span><span class="seg sm" data-change="theme">${['system', 'light', 'dark'].map(t => `<button data-act="seg" data-val="${t}" class="${S.theme === t ? 'on' : ''}">${t === 'system' ? 'Auto' : t[0].toUpperCase() + t.slice(1)}</button>`).join('')}</span></div>
     <button class="row" data-act="colors-open"><span class="itile" style="--c:var(--tint);color:var(--on-tint)">${IC.star}</span><span class="t"><b>Colors and themes</b></span><span class="cdots">${COLOR_ROWS.map(([k]) => `<i style="background:${colorOf(k)}"></i>`).join('')}</span>${IC.chev}</button>
-    <div class="row"><span class="itile" style="--c:var(--hol);color:var(--hol-ink)">${IC.flag}</span><span class="t"><b>Holiday labels</b><small>Name on each holiday's day</small></span><button class="switch${S.showHolidays ? ' on' : ''}" role="switch" aria-checked="${!!S.showHolidays}" aria-label="Holiday artwork" data-act="switch" data-change="toggle-hol"></button></div></div>
+    <div class="row"><span class="itile" style="--c:var(--hol);color:var(--hol-ink)">${IC.flag}</span><span class="t"><b>Holiday labels</b><small>Name on each holiday's day</small></span><button class="switch${S.showHolidays ? ' on' : ''}" role="switch" aria-checked="${!!S.showHolidays}" aria-label="Holiday labels" data-act="switch" data-change="toggle-hol"></button></div>
+    <div class="row"><span class="itile" style="--c:#6C7077">${IC.textsize}</span><span class="t"><b>Text size</b></span><span class="seg sm" data-change="text-size">${[['m', '<span class="ts1">A</span>', 'Default'], ['l', '<span class="ts2">A</span>', 'Large'], ['xl', '<span class="ts3">A</span>', 'Extra large']].map(([v, l, al]) => `<button data-act="seg" data-val="${v}" class="${String(S.textSize) === v ? 'on' : ''}"${al ? ` aria-label="${al}"` : ''}>${l}</button>`).join('')}</span></div>
+    <div class="row"><span class="itile" style="--c:#6C7077">${IC.motion}</span><span class="t"><b>Reduce motion</b><small>Also on when your phone asks for it</small></span><button class="switch${S.reduceMotion ? ' on' : ''}" role="switch" aria-checked="${S.reduceMotion}" aria-label="Reduce motion" data-act="switch" data-change="toggle-motion"></button></div>
+    ${'vibrate' in navigator ? `<div class="row"><span class="itile" style="--c:#6C7077">${IC.vibrate}</span><span class="t"><b>Haptics</b><small>A light tap when you change a setting</small></span><button class="switch${S.haptics !== false ? ' on' : ''}" role="switch" aria-checked="${S.haptics !== false}" aria-label="Haptics" data-act="switch" data-change="toggle-haptics"></button></div>` : ''}</div>
+  <div class="sec-h">Calendar and units</div>
+  <div class="group ic"><div class="row"><span class="itile" style="--c:var(--day)">${IC.week}</span><span class="t"><b>Week starts on</b></span><span class="seg sm" data-change="week-start">${[['0', 'Sun', 'Sunday'], ['1', 'Mon', 'Monday']].map(([v, l, al]) => `<button data-act="seg" data-val="${v}" class="${String(S.weekStart) === v ? 'on' : ''}"${al ? ` aria-label="${al}"` : ''}>${l}</button>`).join('')}</span></div>
+    <div class="row"><span class="itile" style="--c:var(--day)">${IC.clock}</span><span class="t"><b>Time format</b></span><span class="seg sm" data-change="clock">${[['12', '12-hr', '12-hour'], ['24', '24-hr', '24-hour']].map(([v, l, al]) => `<button data-act="seg" data-val="${v}" class="${String(S.clock24 ? '24' : '12') === v ? 'on' : ''}"${al ? ` aria-label="${al}"` : ''}>${l}</button>`).join('')}</span></div>
+    <div class="row"><span class="itile" style="--c:var(--day)">${IC.ruler}</span><span class="t"><b>Distance</b></span><span class="seg sm" data-change="dist">${[['mi', 'Miles'], ['km', 'Km', 'Kilometers']].map(([v, l, al]) => `<button data-act="seg" data-val="${v}" class="${String(S.dist) === v ? 'on' : ''}"${al ? ` aria-label="${al}"` : ''}>${l}</button>`).join('')}</span></div>
+    <button class="row" data-act="currency-open"><span class="itile" style="--c:var(--day)">${IC.coin}</span><span class="t"><b>Currency</b></span><span class="v">${esc(S.currency)}</span>${IC.chev}</button></div>
   <div class="sec-h">Your data</div>
   <div class="group ic"><button class="row" data-act="pdf-open"><span class="itile" style="--c:var(--danger)">${IC.cal}</span><span class="t"><b>Year calendar PDF</b><small>One page with your year and holidays, for family</small></span>${IC.chev}</button>
     <button class="row" data-act="export-ics"><span class="itile" style="--c:var(--day)">${IC.cal}</span><span class="t"><b>Export to a calendar app</b><small>A year of hitches as an .ics file</small></span>${IC.chev}</button>
     <button class="row" data-act="backup"><span class="itile" style="--c:var(--day)">${IC.down}</span><span class="t"><b>Back up</b><small>Save everything to a file</small></span>${IC.chev}</button>
     <button class="row" data-act="restore"><span class="itile" style="--c:var(--day)">${IC.up}</span><span class="t"><b>Restore from a backup</b></span>${IC.chev}</button></div>
   <p class="foot">Everything is stored on this device. Nothing is uploaded.</p>
+  <div class="sec-h">Help and about</div>
+  <div class="group ic"><button class="row" data-act="whats-new"><span class="itile" style="--c:var(--hol);color:var(--hol-ink)">${IC.sparkle}</span><span class="t"><b>What's new</b></span><span class="v">${APP_VERSION}</span>${IC.chev}</button>
+    <button class="row" data-act="faq-open"><span class="itile" style="--c:var(--home)">${IC.help}</span><span class="t"><b>Help and FAQ</b></span>${IC.chev}</button>
+    <button class="row" data-act="feedback-open"><span class="itile" style="--c:var(--home)">${IC.mail}</span><span class="t"><b>Send feedback</b><small>Ideas, questions or something broken</small></span>${IC.chev}</button>
+    <button class="row" data-act="share-app"><span class="itile" style="--c:var(--home)">${IC.share}</span><span class="t"><b>Share HitchCal</b><small>Send it to your crew</small></span>${IC.chev}</button>
+    <button class="row" data-act="legal" data-doc="privacy"><span class="itile" style="--c:#6C7077">${IC.lock}</span><span class="t"><b>Privacy policy</b></span>${IC.chev}</button>
+    <button class="row" data-act="legal" data-doc="terms"><span class="itile" style="--c:#6C7077">${IC.doc}</span><span class="t"><b>Terms of use</b></span>${IC.chev}</button>
+    ${DEV.enabled ? `<button class="row" data-act="dev-open"><span class="itile" style="--c:var(--danger)">${IC.wrench}</span><span class="t"><b>Developer</b><small>Testing tools</small></span>${IC.chev}</button>` : ''}</div>
   <div class="group" style="margin-top:24px"><button class="row red" data-act="reset">Erase all data</button></div>
-  <p class="about">HitchCal 2.0<br>Built for rotation workers.</p>`;
+  <button type="button" class="about" data-act="about-tap">HitchCal ${APP_VERSION}<br>Built for rotation workers.</button>`;
 }
 function renderCerts() {
   const list = [...S.certs].sort((a, b) => (a.expiry < b.expiry ? -1 : 1));
@@ -1103,7 +1273,7 @@ function openCert(id) {
     title: c ? 'Edit certification' : 'Add certification', right: c ? 'Save' : 'Add',
     body: `<div class="group form" style="margin-top:6px"><label class="row"><span class="k">Name</span><input type="text" id="ce-name" placeholder="H2S Alive" maxlength="40" autocomplete="off" value="${esc(c ? c.name : '')}"></label>
       <label class="row"><span class="k">Expires</span><input type="date" id="ce-exp" value="${esc(c ? c.expiry : '')}"></label></div>
-      <div class="sec-h">Common in the oilfield</div><div class="chips">${CERT_LIB.map(n => `<button type="button" class="pchip" data-act="cert-pick" style="font-size:14px">${esc(n)}</button>`).join('')}</div>
+      <div class="sec-h">Common in the oilfield</div><div class="chips">${CERT_LIB.map(n => `<button type="button" class="pchip" data-act="cert-pick" style="font-size:calc(14px*var(--ts))">${esc(n)}</button>`).join('')}</div>
       ${c ? '<button class="btn del" data-act="cert-del">Delete certification</button>' : ''}`,
     onOpen(body) { body.dataset.id = id || ''; },
     onPrimary() {
@@ -1175,14 +1345,15 @@ function obShow() {
 }
 function obPreview() {
   const d = readHitch('ob'); if (!validKey(d.hitchStart)) return;
-  const sch = { hitchStart: d.hitchStart, pattern: d.pattern }, start = parseKey(d.hitchStart), first = addDays(start, -start.getDay());
-  let h = 'SMTWTFS'.split('').map(c => `<small>${c}</small>`).join('');
+  const sch = { hitchStart: d.hitchStart, pattern: d.pattern }, start = parseKey(d.hitchStart), first = addDays(start, -wsLead(start));
+  let h = dowLetters().split('').map(c => `<small>${c}</small>`).join('');
   for (let i = 0; i < 35; i++) { const x = addDays(first, i), ci = cellInfo(toKey(x), sch); h += `<i class="${ci.type === 'on' ? (ci.shift === 'night' ? 'n' : 'd') : ''}${toKey(x) === d.hitchStart ? ' st' : ''}">${x.getDate()}</i>`; }
   $('#ob-prev').innerHTML = h;
   const p = d.pattern, b = hitchBounds(start, sch);
   $('#ob-sum').innerHTML = `<b>${plural(p.daysOn, 'day')} on, ${p.daysOff} off.</b> ${p.alternating ? 'Alternating days and nights' : shiftName(p.shiftType)}, ${fmt12(p.startTime)} to ${fmt12(p.endTime)}. This hitch runs ${fmtDay(b.begin)} to ${fmtDay(b.end)}.`;
 }
 function obFinish() {
+  S.seenVersion = APP_VERSION;
   const d = readHitch('ob');
   if (!validKey(d.hitchStart)) return toast('Pick the first day of a hitch');
   if (S.demo || !S.setup) { const keep = S.theme, kc = S.colors; S = DEF(); S.theme = keep; S.colors = kc; }
@@ -1206,7 +1377,7 @@ const A = {
   'pay-edit': () => openPayEdit(),
   'pay-type': v => { $('#pe-day').hidden = v === 'hourly'; $('#pe-hr').hidden = $('#pe-hr-note').hidden = v !== 'hourly'; },
   'hitch-miles': el => openMiles(el.dataset.k),
-  'miles-reset': () => { delete S.hitchMiles[$('#sheet-body').dataset.k]; save(); closeSheet(); render(); toast('Back to your usual miles'); },
+  'miles-reset': () => { delete S.hitchMiles[$('#sheet-body').dataset.k]; save(); closeSheet(); render(); toast(`Back to your usual ${DU().w}`); },
   'pay-travel': v => { $('#pe-trg').hidden = +v === 0; },
   av: el => { const pfx = el.parentElement.dataset.pfx, s = pick[pfx]; s.mode = el.dataset.v ? 'icon' : 'init'; if (el.dataset.v) s.icon = el.dataset.v; el.parentElement.innerHTML = avOpts(pfx); },
   'av-photo': el => { const pfx = el.parentElement.dataset.pfx, s = pick[pfx]; if (s.photo && s.mode !== 'photo') { s.mode = 'photo'; el.parentElement.innerHTML = avOpts(pfx); return; } photoTarget = pfx; $('#photo-file').click(); },
@@ -1235,6 +1406,34 @@ const A = {
   'note-del': () => { delete S.notes[$('#sheet-body').dataset.k]; save(); closeSheet(); render(); toast('Note deleted'); },
   theme: v => { S.theme = v; save(); applyTheme(); },
   'toggle-hol': on => { S.showHolidays = on; save(); },
+  'text-size': v => { S.textSize = v; save(); applyPrefs(); },
+  'toggle-motion': on => { S.reduceMotion = on; save(); applyPrefs(); },
+  'toggle-haptics': on => { S.haptics = on; save(); },
+  'week-start': v => { S.weekStart = +v ? 1 : 0; save(); applyPrefs(); render(); },
+  clock: v => { S.clock24 = v === '24'; save(); render(); },
+  dist: v => { S.dist = v === 'km' ? 'km' : 'mi'; save(); render(); },
+  'currency-open': () => openCurrency(),
+  'currency-pick': el => { S.currency = el.dataset.c; save(); closeSheet(); render(); toast(`Amounts now show in ${el.dataset.c}`); },
+  'whats-new': () => openWhatsNew(),
+  'faq-open': () => openFaq(),
+  'feedback-open': () => openFeedback(),
+  'feedback-mail': () => mailSupport(),
+  'diag-copy': () => copyText(diag(), 'Device details copied'),
+  'share-app': () => shareApp(),
+  legal: el => openLegal(el.dataset.doc),
+  'about-tap': () => aboutTap(),
+  'dev-open': () => openDev(),
+  'dev-travel': () => { const v = $('#dv-date').value; if (!validKey(v)) return toast('Pick a date'); travelTo(v === toKey(new RealDate()) ? null : v); },
+  'dev-travel-off': () => travelTo(null),
+  'dev-sample': el => { const [n, pat] = SAMPLES[+el.dataset.i]; S.pattern = { ...S.pattern, ...pat }; S.hitchStart = toKey(addDays(startOfDay(new Date()), -3)); S.setup = true; save(); closeSheet(); render(); toast(`Loaded ${n}`); },
+  'dev-flag-premium': on => { DEV.flags.premium = on; saveDev(); },
+  'dev-flag-outline': on => { DEV.flags.outline = on; saveDev(); applyPrefs(); },
+  'dev-errors-clear': () => { ERRS = []; try { localStorage.removeItem(ERRK); } catch (e) { /* storage unavailable */ } openDev(); toast('Error log cleared'); },
+  'dev-cache': async () => { try { if (window.caches) { const ks = await caches.keys(); await Promise.all(ks.map(k => caches.delete(k))); } if (navigator.serviceWorker) { const rs = await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.map(r => r.unregister())); } } catch (e) { logError(e.message, 'dev-cache'); } location.reload(); },
+  'dev-onboard': () => { closeSheet(); startOnboarding(); },
+  'dev-throw': () => { setTimeout(() => { throw new Error('Test error from the developer menu'); }, 0); setTimeout(openDev, 60); toast('Test error logged'); },
+  'dev-off': () => { DEV = { flags: {} }; saveDev(); closeSheet(); applyPrefs(); render(); toast('Developer tools are off'); },
+  'upd-reload': () => location.reload(),
   'share-family': () => shareFamily(),
   'family-preview': () => { if (!S.name.trim()) { toast('Add your name first so family knows whose schedule it is'); return openHitch(); } showFamily(parseShare('?s=' + shareCode()), true); },
   'fam-close': () => closeFamily(),
@@ -1259,7 +1458,7 @@ const A = {
   emoji: el => { const was = el.classList.contains('on'); $$('.emo', el.parentElement).forEach(s => s.classList.remove('on')); if (!was) el.classList.add('on'); },
   'ob-next': () => { if (obStep === 3) return obFinish(); obStep++; obShow(); },
   'ob-back': () => { if (obStep === 0) { if (S.setup) $('#onboard').hidden = true; return; } obStep--; obShow(); },
-  'ob-demo': () => { S = demoData(); save(); $('#onboard').hidden = true; showTab('cal'); }
+  'ob-demo': () => { S = demoData(); S.seenVersion = APP_VERSION; track('Demo opened'); save(); $('#onboard').hidden = true; showTab('cal'); }
 };
 function formChanged(el) {
   const form = el.closest('[data-form]'); if (!form) return;
@@ -1268,7 +1467,7 @@ function formChanged(el) {
 }
 
 /* ───────── wiring ───────── */
-document.addEventListener('click', e => { const el = e.target.closest('[data-act]'); if (!el) return; const fn = A[el.dataset.act]; if (fn) fn(el, e); });
+document.addEventListener('click', e => { const el = e.target.closest('[data-act]'); if (!el) return; if (el.matches('.seg button, .switch, .tab, .cs, .theme-btn')) buzz(); const fn = A[el.dataset.act]; if (fn) fn(el, e); });
 document.addEventListener('input', e => { if (e.target.dataset.colorK) return setColor(e.target.dataset.colorK, e.target.value, false); if (e.target.closest('[data-form]')) formChanged(e.target); });
 document.addEventListener('change', e => { if (e.target.dataset.colorK) setColor(e.target.dataset.colorK, e.target.value); });
 document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; if (!$('#alert').hidden) closeAlert(); else if (!$('#sheet').hidden) closeSheet(); });
@@ -1320,14 +1519,19 @@ $('#photo-file').addEventListener('change', e => {
 })();
 
 /* ───────── boot ───────── */
-load(); applyTheme(); applyColors();
+load(); applyTheme(); applyColors(); applyPrefs(); loadServices();
 pendingImport = parseShare(location.search);
 const famLink = parseFamily(location.search);
 if (famLink) showFamily(famLink, false);
 else if (S.setup) { showTab('cal'); if (pendingImport) { const pre = pendingImport; pendingImport = null; setTimeout(() => openRoster(null, pre), 400); } }
 else startOnboarding();
 setInterval(tick, 1000);
-if (!EMBEDDED && 'serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => { /* offline support is optional */ });
+if (!EMBEDDED && 'serviceWorker' in navigator && location.protocol === 'https:') {
+  const hadSW = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadSW) showUpdate(); });
+  navigator.serviceWorker.register('sw.js').catch(() => { /* offline support is optional */ });
+}
+if (S.setup && !famLink && S.seenVersion !== APP_VERSION) { S.seenVersion = APP_VERSION; save(); setTimeout(() => { if ($('#sheet').hidden) openWhatsNew(); }, 900); }
 
 /* exposed for the schedule-math self-check only */
 window.__hitchcal = { familyLink, pdfData: y => loadPdfLib().then(J => buildPdf(J, y).output('datauristring')), cellInfo, nowInfo, hitchBounds, transitions, holidays, dayType, parseShare, toKey };
