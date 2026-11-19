@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Assemble HitchCal: one artifact page for preview, and a deployable site folder."""
-import base64, json, pathlib, re, shutil, zipfile
+import base64, hashlib, json, pathlib, re, shutil, zipfile
 
 ROOT = pathlib.Path(__file__).parent
 SRC, OUT, DIST = ROOT / 'src', ROOT / 'build', ROOT / 'dist'
@@ -19,6 +19,10 @@ DARK = ("color-scheme:dark;--bg:#000000;--surface:#1E1F23;--surface-up:#2C2D31;-
 
 FONTS = '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">'
 DESC = "Rotation schedule, countdown to days off and hitch pay for oilfield and rotation workers."
+# The public address of the site. Link previews (Messages, Facebook, X) need full addresses.
+# Change this when the .com is live.
+SITE_URL = 'https://hvrl3y.github.io/Hitchcal/'
+
 
 
 def build():
@@ -41,6 +45,26 @@ def build():
     if DIST.exists():
         shutil.rmtree(DIST)
     DIST.mkdir()
+    # Every image gets a version from its contents, so phones and link previews fetch a changed image
+    # instead of reusing a saved copy of the old one.
+    BR = SRC / 'brand'
+    ver = {n: hashlib.sha1((BR / n).read_bytes()).hexdigest()[:8] for n in ('favicon.svg', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'apple-touch-icon.png', 'og.jpg')}
+    og = f"og-{ver['og.jpg']}.jpg"
+    shutil.copy(BR / 'og.jpg', DIST / og)
+    share_tags = f'''<meta property="og:site_name" content="HitchCal">
+<meta property="og:title" content="HitchCal: know exactly when you're home">
+<meta property="og:description" content="{DESC}">
+<meta property="og:type" content="website">
+<meta property="og:url" content="{SITE_URL}">
+<meta property="og:image" content="{SITE_URL}{og}">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The HitchCal icon and the words: know exactly when you're home">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="{SITE_URL}{og}">'''
+    icon_links = f'''<link rel="icon" href="favicon.svg?v={ver['favicon.svg']}" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png?v={ver['apple-touch-icon.png']}">'''
     head = f'''<!doctype html>
 <html lang="en">
 <head>
@@ -55,13 +79,9 @@ def build():
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="HitchCal">
 <meta name="format-detection" content="telephone=no">
-<meta property="og:title" content="HitchCal">
-<meta property="og:description" content="{DESC}">
-<meta property="og:type" content="website">
-<meta property="og:image" content="icon-512.png">
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="favicon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
+{share_tags}
+<link rel="manifest" href="manifest.webmanifest?v={ver['icon-512.png']}">
+{icon_links}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 {FONTS}
@@ -81,9 +101,9 @@ img{{max-width:100%}}
         "name": "HitchCal", "short_name": "HitchCal", "description": DESC, "start_url": ".", "scope": ".",
         "display": "standalone", "orientation": "portrait", "background_color": "#2A2C30", "theme_color": "#1E1F23",
         "categories": ["productivity", "business"],
-        "icons": [{"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
-                  {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
-                  {"src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}]
+        "icons": [{"src": f"icon-192.png?v={ver['icon-192.png']}", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+                  {"src": f"icon-512.png?v={ver['icon-512.png']}", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+                  {"src": f"icon-maskable-512.png?v={ver['icon-maskable-512.png']}", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}]
     }, indent=2))
 
     (DIST / 'sw.js').write_text('''// HitchCal offline support: try the network first so updates land, fall back to the saved copy on a bad signal.
@@ -128,7 +148,12 @@ self.addEventListener('fetch', e => {
     (DIST / 'jspdf.umd.min.js').write_bytes((ROOT / 'vendor' / 'jspdf.umd.min.js').read_bytes())  # jsPDF 2.5.1, MIT licence
     (DIST / '.nojekyll').write_text('')
     # landing page for the .com, with its screenshots (made by tools/render_shots.py)
-    shutil.copyfile(SRC / 'landing.html', DIST / 'landing.html')
+    land = (SRC / 'landing.html').read_text(encoding='utf-8')
+    for o in ('<meta property="og:image" content="landing/shot-insights.webp">', '<link rel="icon" href="favicon.svg" type="image/svg+xml">\n<link rel="apple-touch-icon" href="apple-touch-icon.png">'):
+        assert o in land, o
+    land = land.replace('<meta property="og:image" content="landing/shot-insights.webp">', share_tags.replace(f'content="{SITE_URL}"', f'content="{SITE_URL}landing.html"'))
+    land = land.replace('<link rel="icon" href="favicon.svg" type="image/svg+xml">\n<link rel="apple-touch-icon" href="apple-touch-icon.png">', icon_links)
+    (DIST / 'landing.html').write_text(land, encoding='utf-8')
     (DIST / 'landing').mkdir(exist_ok=True)
     for f in (SRC / 'landing').glob('*.webp'): shutil.copyfile(f, DIST / 'landing' / f.name)
     for slug, title in (('privacy', 'Privacy policy'), ('terms', 'Terms of use')):

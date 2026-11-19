@@ -17,6 +17,21 @@ async def main():
             await pg.set_content(f'<html><body style="margin:0;background:transparent">{svg.replace("<svg ", f"<svg width=\"{size}\" height=\"{size}\" ", 1)}</body></html>')
             await pg.screenshot(path=str(B / out), omit_background=transparent, clip={'x': 0, 'y': 0, 'width': size, 'height': size})
             await pg.close()
+        # link-preview card (og:image) shown when the site is shared in Messages, Facebook, X, Slack
+        icon = (B / 'icon-rounded.svg').read_text().replace('<svg ', '<svg width="300" height="300" ', 1)
+        pg = await b.new_page(viewport={'width': 1200, 'height': 630})
+        await pg.set_content(f"""<html><body style="margin:0;width:1200px;height:630px;overflow:hidden;font-family:Inter,'Helvetica Neue',Arial,sans-serif;
+          background:radial-gradient(900px 600px at 18% 10%,rgba(82,135,184,.32),rgba(82,135,184,0)),linear-gradient(150deg,#2E3035,#141518);color:#F2F3F5">
+          <div style="display:flex;align-items:center;gap:64px;height:100%;padding:0 90px;box-sizing:border-box">
+            <div style="flex:0 0 300px;filter:drop-shadow(0 26px 40px rgba(0,0,0,.55))">{icon}</div>
+            <div>
+              <div style="font-size:30px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#C2A06A;margin-bottom:18px">For rotation workers</div>
+              <div style="font-size:104px;font-weight:800;letter-spacing:-.035em;line-height:1">HitchCal</div>
+              <div style="font-size:46px;font-weight:600;line-height:1.2;margin-top:22px;color:#D9DCE1">Know exactly when<br>you're home.</div>
+            </div>
+          </div></body></html>""")
+        await pg.screenshot(path=str(B / 'og.jpg'), type='jpeg', quality=88, clip={'x': 0, 'y': 0, 'width': 1200, 'height': 630})
+        await pg.close()
         await b.close()
 asyncio.run(main())
 print('rendered')
