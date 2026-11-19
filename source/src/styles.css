@@ -1,21 +1,21 @@
 /* Layout: iOS tab-bar app. One hero per screen (the countdown), inset grouped lists under it, a sheet for every edit. */
 :root{
   color-scheme:light;
-  --bg:#F2F2F7; --surface:#FFFFFF; --surface-up:#FFFFFF; --sheet:#F2F2F7; --cell:#FFFFFF;
+  --bg:#EFF0F2; --surface:#FFFFFF; --surface-up:#FFFFFF; --sheet:#EFF0F2; --cell:#FFFFFF;
   --fill:rgba(120,120,128,.12); --fill-2:rgba(120,120,128,.22); --seg-on:#FFFFFF;
   --sep:rgba(60,60,67,.17);
   --label:#0B0B0F; --label-2:rgba(60,60,67,.68); --label-3:rgba(60,60,67,.36);
-  --bar:rgba(247,247,250,.82);
-  --tint:#5B8DB8; --tint-text:#2F5F8C; --on-tint:#0B0B0D; --tint-soft:rgba(91,141,184,.17);
-  --day:#007AFF; --day-text:#0060C7; --day-bg:rgba(0,122,255,.13);
-  --night:#5856D6; --night-text:#4442B4; --night-bg:rgba(88,86,214,.16);
-  --home:#34C759; --home-text:#1B7F37; --home-bg:rgba(52,199,89,.16);
+  --bar:rgba(244,245,247,.84);
+  --tint:#4E5157; --tint-text:#24262A; --on-tint:#FFFFFF; --tint-soft:rgba(78,81,87,.13);
+  --day:#5F84A8; --day-text:#3F576F; --day-bg:rgba(95,132,168,0.15);
+  --night:#6E6C9C; --night-text:#494767; --night-bg:rgba(110,108,156,0.15);
+  --home:#5E9470; --home-text:#3E624A; --home-bg:rgba(94,148,112,0.15);
   --danger:#FF3B30; --danger-text:#D12A20; --danger-bg:rgba(255,59,48,.12);
   --warn-text:#A85600; --warn-bg:rgba(255,149,0,.17);
   --hero-ink:#FFFFFF; --knob:#FFFFFF;
-  --hero-day-a:#2A93FF; --hero-day-b:#0058D6;
-  --hero-night-a:#7472F0; --hero-night-b:#3A38A8;
-  --hero-home-a:#27A84F; --hero-home-b:#0F6E36;
+  --hero-day-a:#547494; --hero-day-b:#3B5268;
+  --hero-night-a:#615F89; --hero-night-b:#444361;
+  --hero-home-a:#538263; --hero-home-b:#3A5C45;
   --toast-bg:rgba(28,28,30,.94); --toast-ink:#FFFFFF;
   --scrim:rgba(0,0,0,.36);
   --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Inter",system-ui,"Segoe UI",Roboto,sans-serif;
@@ -55,9 +55,9 @@ svg{display:block}
 .lt{font-size:34px;line-height:41px;font-weight:800;letter-spacing:-.022em;margin-bottom:14px;text-wrap:balance}
 
 .tabbar{position:absolute;left:0;right:0;bottom:0;z-index:40;height:var(--tabh);padding:0 env(safe-area-inset-right,0px) var(--sab) env(safe-area-inset-left,0px);display:flex;background:var(--bar);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-top:.5px solid var(--sep)}
-.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:10px;font-weight:500;color:var(--label-2);transition:transform .15s}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:10px;font-weight:500;color:var(--label-3);transition:transform .15s}
 .tab svg{width:25px;height:25px}
-.tab.on{color:var(--tint-text)}
+.tab.on{color:var(--tint-text);font-weight:600}
 .tab:active{transform:scale(.92)}
 .brand{display:none;align-items:center;gap:10px;font-weight:800;font-size:20px;letter-spacing:-.02em;padding:6px 12px 22px}
 .brand svg{width:30px;height:30px}
@@ -300,9 +300,10 @@ button.row:active,.card-btn:active{background:var(--fill)}
 .avgrp{grid-column:1/-1;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--label-2);margin:2px 4px -4px}
 .avgrp.avcap{text-transform:none;letter-spacing:0;font-size:15px;color:var(--label);text-align:center;margin:4px 0 0}
 
-.themes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.theme-btn{background:var(--surface);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
-.theme-btn b{font-weight:600}
+.themes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.theme-btn{background:var(--surface);border-radius:12px;padding:9px 10px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.theme-btn b{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.theme-btn span{gap:3px}.theme-btn span i{width:12px;height:12px}
 .theme-btn span,.cdots{display:flex;gap:5px;flex-shrink:0}
 .theme-btn i,.cdots i{width:18px;height:18px;border-radius:50%}
 .cdots i{width:14px;height:14px}
@@ -458,4 +459,14 @@ button.row:active,.card-btn:active{background:var(--fill)}
 .pk-r::-moz-range-thumb{width:28px;height:28px;border-radius:50%;background:#fff;border:0;box-shadow:0 1px 4px rgba(0,0,0,.35)}
 .pk-btns{display:grid;grid-template-columns:1fr 2fr;gap:8px}
 .pk-btns .btn{margin:0}
+
+/* Compact color rows: one line of swatches per color, scrolls sideways */
+.crow{padding:11px 0 10px}
+.crow+.crow{box-shadow:inset 0 .5px 0 var(--sep)}
+.crow-h{display:flex;justify-content:space-between;align-items:center;padding:0 16px;font-size:15px;margin-bottom:6px}
+.cnow{width:14px;height:14px;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
+.cline{display:flex;align-items:center;gap:10px;overflow-x:auto;padding:5px 16px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.cline::-webkit-scrollbar{display:none}
+.cline .cs{width:30px;height:30px;flex:0 0 30px;justify-self:auto}
+.cdiv{flex:0 0 1px;height:22px;background:var(--sep)}
 

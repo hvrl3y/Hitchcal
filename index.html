@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>HitchCal · Rotation schedule and hitch pay</title>
 <meta name="description" content="Rotation schedule, countdown to days off and hitch pay for oilfield and rotation workers.">
-<meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#EFF0F2" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -26,21 +26,21 @@
 /* Layout: iOS tab-bar app. One hero per screen (the countdown), inset grouped lists under it, a sheet for every edit. */
 :root{
   color-scheme:light;
-  --bg:#F2F2F7; --surface:#FFFFFF; --surface-up:#FFFFFF; --sheet:#F2F2F7; --cell:#FFFFFF;
+  --bg:#EFF0F2; --surface:#FFFFFF; --surface-up:#FFFFFF; --sheet:#EFF0F2; --cell:#FFFFFF;
   --fill:rgba(120,120,128,.12); --fill-2:rgba(120,120,128,.22); --seg-on:#FFFFFF;
   --sep:rgba(60,60,67,.17);
   --label:#0B0B0F; --label-2:rgba(60,60,67,.68); --label-3:rgba(60,60,67,.36);
-  --bar:rgba(247,247,250,.82);
-  --tint:#5B8DB8; --tint-text:#2F5F8C; --on-tint:#0B0B0D; --tint-soft:rgba(91,141,184,.17);
-  --day:#007AFF; --day-text:#0060C7; --day-bg:rgba(0,122,255,.13);
-  --night:#5856D6; --night-text:#4442B4; --night-bg:rgba(88,86,214,.16);
-  --home:#34C759; --home-text:#1B7F37; --home-bg:rgba(52,199,89,.16);
+  --bar:rgba(244,245,247,.84);
+  --tint:#4E5157; --tint-text:#24262A; --on-tint:#FFFFFF; --tint-soft:rgba(78,81,87,.13);
+  --day:#5F84A8; --day-text:#3F576F; --day-bg:rgba(95,132,168,0.15);
+  --night:#6E6C9C; --night-text:#494767; --night-bg:rgba(110,108,156,0.15);
+  --home:#5E9470; --home-text:#3E624A; --home-bg:rgba(94,148,112,0.15);
   --danger:#FF3B30; --danger-text:#D12A20; --danger-bg:rgba(255,59,48,.12);
   --warn-text:#A85600; --warn-bg:rgba(255,149,0,.17);
   --hero-ink:#FFFFFF; --knob:#FFFFFF;
-  --hero-day-a:#2A93FF; --hero-day-b:#0058D6;
-  --hero-night-a:#7472F0; --hero-night-b:#3A38A8;
-  --hero-home-a:#27A84F; --hero-home-b:#0F6E36;
+  --hero-day-a:#547494; --hero-day-b:#3B5268;
+  --hero-night-a:#615F89; --hero-night-b:#444361;
+  --hero-home-a:#538263; --hero-home-b:#3A5C45;
   --toast-bg:rgba(28,28,30,.94); --toast-ink:#FFFFFF;
   --scrim:rgba(0,0,0,.36);
   --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Inter",system-ui,"Segoe UI",Roboto,sans-serif;
@@ -49,8 +49,8 @@
   --sat:0px; --sab:0px; --tabh:calc(52px + var(--sab)); --side:0px;
   --ease:cubic-bezier(.32,.72,0,1);
 }
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#000000;--surface:#1E1F23;--surface-up:#2C2D31;--sheet:#1E1F23;--cell:#1E1F23;--fill:rgba(120,120,128,.24);--fill-2:rgba(120,120,128,.38);--seg-on:#636366;--sep:rgba(84,84,88,.62);--label:#FFFFFF;--label-2:rgba(235,235,245,.64);--label-3:rgba(235,235,245,.3);--bar:rgba(20,20,22,.8);--tint:#5B8DB8;--tint-text:#8DB5DA;--on-tint:#0B0B0D;--tint-soft:rgba(91,141,184,.2);--day:#0A84FF;--day-text:#74B8FF;--day-bg:rgba(10,132,255,.27);--night:#5E5CE6;--night-text:#B0AEFF;--night-bg:rgba(94,92,230,.32);--home:#30D158;--home-text:#3DDC68;--home-bg:rgba(48,209,88,.18);--danger:#FF453A;--danger-text:#FF6961;--danger-bg:rgba(255,69,58,.18);--warn-text:#FFB340;--warn-bg:rgba(255,159,10,.2);--toast-bg:rgba(235,235,240,.96);--toast-ink:#000000;--scrim:rgba(0,0,0,.55)}}
-:root[data-theme="dark"]{color-scheme:dark;--bg:#000000;--surface:#1E1F23;--surface-up:#2C2D31;--sheet:#1E1F23;--cell:#1E1F23;--fill:rgba(120,120,128,.24);--fill-2:rgba(120,120,128,.38);--seg-on:#636366;--sep:rgba(84,84,88,.62);--label:#FFFFFF;--label-2:rgba(235,235,245,.64);--label-3:rgba(235,235,245,.3);--bar:rgba(20,20,22,.8);--tint:#5B8DB8;--tint-text:#8DB5DA;--on-tint:#0B0B0D;--tint-soft:rgba(91,141,184,.2);--day:#0A84FF;--day-text:#74B8FF;--day-bg:rgba(10,132,255,.27);--night:#5E5CE6;--night-text:#B0AEFF;--night-bg:rgba(94,92,230,.32);--home:#30D158;--home-text:#3DDC68;--home-bg:rgba(48,209,88,.18);--danger:#FF453A;--danger-text:#FF6961;--danger-bg:rgba(255,69,58,.18);--warn-text:#FFB340;--warn-bg:rgba(255,159,10,.2);--toast-bg:rgba(235,235,240,.96);--toast-ink:#000000;--scrim:rgba(0,0,0,.55)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#000000;--surface:#1E1F23;--surface-up:#2C2D31;--sheet:#1E1F23;--cell:#1E1F23;--fill:rgba(120,120,128,.24);--fill-2:rgba(120,120,128,.38);--seg-on:#636366;--sep:rgba(84,84,88,.62);--label:#FFFFFF;--label-2:rgba(235,235,245,.64);--label-3:rgba(235,235,245,.3);--bar:rgba(20,20,22,.8);--tint:#B9BEC6;--tint-text:#D9DCE1;--on-tint:#16171A;--tint-soft:rgba(185,190,198,.18);--day:#5F84A8;--day-text:#ACBFD2;--day-bg:rgba(95,132,168,0.3);--night:#6E6C9C;--night-text:#B4B3CC;--night-bg:rgba(110,108,156,0.3);--home:#5E9470;--home-text:#ABC7B5;--home-bg:rgba(94,148,112,0.3);--danger:#FF453A;--danger-text:#FF6961;--danger-bg:rgba(255,69,58,.18);--warn-text:#FFB340;--warn-bg:rgba(255,159,10,.2);--toast-bg:rgba(235,235,240,.96);--toast-ink:#000000;--scrim:rgba(0,0,0,.55)}}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#000000;--surface:#1E1F23;--surface-up:#2C2D31;--sheet:#1E1F23;--cell:#1E1F23;--fill:rgba(120,120,128,.24);--fill-2:rgba(120,120,128,.38);--seg-on:#636366;--sep:rgba(84,84,88,.62);--label:#FFFFFF;--label-2:rgba(235,235,245,.64);--label-3:rgba(235,235,245,.3);--bar:rgba(20,20,22,.8);--tint:#B9BEC6;--tint-text:#D9DCE1;--on-tint:#16171A;--tint-soft:rgba(185,190,198,.18);--day:#5F84A8;--day-text:#ACBFD2;--day-bg:rgba(95,132,168,0.3);--night:#6E6C9C;--night-text:#B4B3CC;--night-bg:rgba(110,108,156,0.3);--home:#5E9470;--home-text:#ABC7B5;--home-bg:rgba(94,148,112,0.3);--danger:#FF453A;--danger-text:#FF6961;--danger-bg:rgba(255,69,58,.18);--warn-text:#FFB340;--warn-bg:rgba(255,159,10,.2);--toast-bg:rgba(235,235,240,.96);--toast-ink:#000000;--scrim:rgba(0,0,0,.55)}
 
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%}
@@ -80,9 +80,9 @@ svg{display:block}
 .lt{font-size:34px;line-height:41px;font-weight:800;letter-spacing:-.022em;margin-bottom:14px;text-wrap:balance}
 
 .tabbar{position:absolute;left:0;right:0;bottom:0;z-index:40;height:var(--tabh);padding:0 env(safe-area-inset-right,0px) var(--sab) env(safe-area-inset-left,0px);display:flex;background:var(--bar);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-top:.5px solid var(--sep)}
-.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:10px;font-weight:500;color:var(--label-2);transition:transform .15s}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:10px;font-weight:500;color:var(--label-3);transition:transform .15s}
 .tab svg{width:25px;height:25px}
-.tab.on{color:var(--tint-text)}
+.tab.on{color:var(--tint-text);font-weight:600}
 .tab:active{transform:scale(.92)}
 .brand{display:none;align-items:center;gap:10px;font-weight:800;font-size:20px;letter-spacing:-.02em;padding:6px 12px 22px}
 .brand svg{width:30px;height:30px}
@@ -325,9 +325,10 @@ button.row:active,.card-btn:active{background:var(--fill)}
 .avgrp{grid-column:1/-1;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--label-2);margin:2px 4px -4px}
 .avgrp.avcap{text-transform:none;letter-spacing:0;font-size:15px;color:var(--label);text-align:center;margin:4px 0 0}
 
-.themes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.theme-btn{background:var(--surface);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
-.theme-btn b{font-weight:600}
+.themes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.theme-btn{background:var(--surface);border-radius:12px;padding:9px 10px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.theme-btn b{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.theme-btn span{gap:3px}.theme-btn span i{width:12px;height:12px}
 .theme-btn span,.cdots{display:flex;gap:5px;flex-shrink:0}
 .theme-btn i,.cdots i{width:18px;height:18px;border-radius:50%}
 .cdots i{width:14px;height:14px}
@@ -484,6 +485,16 @@ button.row:active,.card-btn:active{background:var(--fill)}
 .pk-btns{display:grid;grid-template-columns:1fr 2fr;gap:8px}
 .pk-btns .btn{margin:0}
 
+/* Compact color rows: one line of swatches per color, scrolls sideways */
+.crow{padding:11px 0 10px}
+.crow+.crow{box-shadow:inset 0 .5px 0 var(--sep)}
+.crow-h{display:flex;justify-content:space-between;align-items:center;padding:0 16px;font-size:15px;margin-bottom:6px}
+.cnow{width:14px;height:14px;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
+.cline{display:flex;align-items:center;gap:10px;overflow-x:auto;padding:5px 16px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.cline::-webkit-scrollbar{display:none}
+.cline .cs{width:30px;height:30px;flex:0 0 30px;justify-self:auto}
+.cdiv{flex:0 0 1px;height:22px;background:var(--sep)}
+
 
 /* standalone site: the page handles the phone's safe areas itself */
 :root{--sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px)}
@@ -546,10 +557,10 @@ img{max-width:100%}
       </div>
     </section>
 
-    <section class="view" id="v-more" aria-label="More">
+    <section class="view" id="v-more" aria-label="Settings">
       <div class="scroll">
         <header class="navbar"><div class="navbar-in wrap">
-          <span class="nav-sp"></span><span class="nav-title">More</span><span class="nav-sp"></span>
+          <span class="nav-sp"></span><span class="nav-title">Settings</span><span class="nav-sp"></span>
         </div></header>
         <div class="wrap" id="more-body"></div>
       </div>
@@ -558,7 +569,7 @@ img{max-width:100%}
     <section class="page" id="page-certs" aria-label="Certifications">
       <div class="scroll">
         <header class="navbar"><div class="navbar-in wrap">
-          <button class="back-btn" data-act="page-back"><svg viewBox="0 0 12 20" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2L2 10l8 8"/></svg>More</button>
+          <button class="back-btn" data-act="page-back"><svg viewBox="0 0 12 20" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2L2 10l8 8"/></svg>Settings</button>
           <span class="nav-title">Certifications</span>
           <button class="icon-btn" data-act="cert-add" aria-label="Add a certification"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
         </div></header>
@@ -568,7 +579,7 @@ img{max-width:100%}
   </div>
 
   <nav class="tabbar" id="tabbar" aria-label="Sections">
-    <div class="brand"><svg viewBox="0 0 1024 1024" aria-hidden="true"><defs><linearGradient id="mit" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#55595F"/><stop offset="1" stop-color="#2A2C30"/></linearGradient>
+    <div class="brand"><svg viewBox="0 0 1024 1024" aria-hidden="true"><defs><linearGradient id="mit" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000"/><stop offset="1" stop-color="#000"/></linearGradient>
 <radialGradient id="milt" cx=".3" cy=".1" r=".85"><stop offset="0" stop-color="#fff" stop-opacity=".16"/><stop offset=".7" stop-color="#fff" stop-opacity="0"/></radialGradient>
 <linearGradient id="mist" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#86B0D6"/><stop offset="1" stop-color="#3E6C94"/></linearGradient>
 <linearGradient id="misv" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FBFCFD"/><stop offset=".38" stop-color="#C3C8CF"/><stop offset=".62" stop-color="#EEF0F3"/><stop offset="1" stop-color="#8A9099"/></linearGradient>
@@ -578,17 +589,12 @@ img{max-width:100%}
 <linearGradient id="midr" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000" stop-opacity=".55"/><stop offset=".55" stop-color="#fff" stop-opacity=".08"/><stop offset="1" stop-color="#fff" stop-opacity=".45"/></linearGradient>
 <filter id="miin" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="9"/></filter>
 <filter id="mish" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#000" flood-opacity=".45"/></filter>
-<clipPath id="midc"><path d="M512 300 C512 300 368 472 368 580 A144 144 0 0 0 656 580 C656 472 512 300 512 300 Z"/></clipPath><clipPath id="mim"><rect width="1024" height="1024" rx="230"/></clipPath></defs><g clip-path="url(#mim)"><rect width="1024" height="1024" fill="url(#mit)"/><rect width="1024" height="512" fill="url(#mist)"/><rect width="1024" height="1024" fill="url(#milt)"/><rect y="510" width="1024" height="4" fill="#000" fill-opacity=".25"/><g transform="translate(512 512) scale(1.3) translate(-512 -512)">
-<path d="M512 300 C512 300 368 472 368 580 A144 144 0 0 0 656 580 C656 472 512 300 512 300 Z" fill="none" stroke="url(#midr)" stroke-width="22" stroke-linejoin="round"/>
-<path d="M512 300 C512 300 368 472 368 580 A144 144 0 0 0 656 580 C656 472 512 300 512 300 Z" fill="url(#mid)"/>
-<g clip-path="url(#midc)"><path d="M512 300 C512 300 368 472 368 580 A144 144 0 0 0 656 580 C656 472 512 300 512 300 Z" fill="none" stroke="#000" stroke-opacity=".85" stroke-width="40" transform="translate(0 -14)" filter="url(#miin)"/></g>
-<path d="M512 300 C512 300 368 472 368 580 A144 144 0 0 0 656 580 C656 472 512 300 512 300 Z" fill="none" stroke="#fff" stroke-opacity=".28" stroke-width="6"/>
-<path d="M490.8 700.2 A122 122 0 0 1 394.1 611.6" fill="none" stroke="url(#mihl)" stroke-width="14" stroke-linecap="round"/></g><rect x="4" y="4" width="1016" height="1016" rx="226" fill="none" stroke="#fff" stroke-opacity=".14" stroke-width="8"/></g></svg>HitchCal</div>
+<clipPath id="midc"><path d="M512 300 C512 300 368 472 368 580 A144 144 0 0 0 656 580 C656 472 512 300 512 300 Z"/></clipPath><linearGradient id="miA" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6C7077"/><stop offset="1" stop-color="#53565C"/></linearGradient><linearGradient id="miB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4E5157"/><stop offset="1" stop-color="#36383D"/></linearGradient><linearGradient id="miF" gradientUnits="userSpaceOnUse" x1="0" y1="300" x2="0" y2="724"><stop offset="0" stop-color="#6C7077"/><stop offset="1" stop-color="#36383D"/></linearGradient><radialGradient id="miSA" gradientUnits="userSpaceOnUse" cx="450" cy="470" r="300"><stop offset="0" stop-color="#6C7077"/><stop offset="1" stop-color="#4E5157"/></radialGradient><linearGradient id="miST" gradientUnits="userSpaceOnUse" x1="0" y1="300" x2="0" y2="724"><stop offset="0" stop-color="#5D7891"/><stop offset="1" stop-color="#3B4D5F"/></linearGradient><clipPath id="mim"><rect width="1024" height="1024" rx="230"/></clipPath></defs><g clip-path="url(#mim)"><rect width="1024" height="1024" fill="url(#miB)"/><polygon points="0,0 1024,0 0,1024" fill="url(#miA)"/><rect width="1024" height="1024" fill="url(#milt)"/><line x1="1024" y1="0" x2="0" y2="1024" stroke="#000" stroke-opacity=".16" stroke-width="4"/><g transform="translate(512 512) scale(1.32) translate(-512 -512)"><path d="M512 300 C512 300 368 472 368 580 A144 144 0 0 0 656 580 C656 472 512 300 512 300 Z" fill="#36383D"/><g clip-path="url(#midc)"><path d="M512 300 C512 300 368 472 368 580 A144 144 0 0 0 656 580 C656 472 512 300 512 300 Z" fill="none" stroke="#000" stroke-opacity="0.95" stroke-width="44" transform="translate(0 -16)" filter="url(#miin)"/></g><path d="M512 300 C512 300 368 472 368 580 A144 144 0 0 0 656 580 C656 472 512 300 512 300 Z" fill="none" stroke="url(#midr)" stroke-width="10" stroke-linejoin="round"/></g><rect x="4" y="4" width="1016" height="1016" rx="226" fill="none" stroke="#fff" stroke-opacity=".12" stroke-width="8"/></g></svg>HitchCal</div>
     <button class="tab" data-act="tab" data-tab="cal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="3.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>Calendar</button>
     <button class="tab" data-act="tab" data-tab="today"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.5" r="7.5"/><path d="M12 9.5v4l2.6 2.4M9.5 3h5"/></svg>Insights</button>
     <button class="tab" data-act="tab" data-tab="pay"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M14.9 9.3c-.5-1-1.5-1.6-2.9-1.6-1.7 0-2.9.9-2.9 2.2 0 3 6 1.4 6 4.3 0 1.3-1.3 2.2-3.1 2.2-1.5 0-2.6-.6-3.1-1.7M12 5.9v1.8M12 16.4v1.7"/></svg>Pay</button>
     <button class="tab" data-act="tab" data-tab="crew"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8.5" r="3.3"/><path d="M2.8 19.2c.5-3.2 3-5 6.2-5s5.7 1.8 6.2 5M16 5.5a3.2 3.2 0 0 1 0 6M18.2 14.6c1.7.7 2.8 2.3 3.1 4.6"/></svg>Crew</button>
-    <button class="tab" data-act="tab" data-tab="more"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="7.8" cy="12" r="1.15" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.15" fill="currentColor" stroke="none"/><circle cx="16.2" cy="12" r="1.15" fill="currentColor" stroke="none"/></svg>More</button>
+    <button class="tab" data-act="tab" data-tab="more"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</button>
   </nav>
 
   <div class="sheet-wrap" id="sheet" hidden>
@@ -1157,11 +1163,12 @@ function applyTheme() {
 
 /* ───────── colors and themes ───────── */
 const HEX = /^#[0-9a-f]{6}$/i;
-const DEFC = { day: '#007AFF', night: '#5856D6', home: '#34C759', accent: '#5B8DB8', hol: '#64D2FF' };
+const DEFC = { day: '#5F84A8', night: '#6E6C9C', home: '#5E9470', accent: '#6C7077', hol: '#C2A06A' };
 const COLOR_ROWS = [['day', 'Day shift'], ['night', 'Night shift'], ['home', 'Days off'], ['accent', 'Buttons and highlights'], ['hol', 'Holiday labels']];
-const SWATCH = ['#007AFF', '#0E9F8E', '#34C759', '#84B816', '#FF9F0A', '#FF7A3D', '#FF3B30', '#E8508C', '#A855F7', '#5856D6', '#5B7FA6', '#8E8E93'];
+const SWATCH = ['#6C7077', '#B9BEC6', '#5F84A8', '#6E6C9C', '#5E9470', '#7E7C68', '#C2A06A', '#8E6A5A', '#007AFF', '#34C759', '#FF9F0A', '#FF3B30'];
 const THEMES = [
-  ['Classic', {}],
+  ['Graphite', {}],
+  ['Bright', { day: '#007AFF', night: '#5856D6', home: '#34C759', accent: '#5B8DB8', hol: '#64D2FF' }],
   ['Sunrise', { day: '#FF7A3D', night: '#4B4FC4', home: '#2E9E68', accent: '#FF7A3D' }],
   ['Pine', { day: '#0E9F8E', night: '#3F5BA9', home: '#84B816', accent: '#0E9F8E' }],
   ['Slate', { day: '#5B7FA6', night: '#7A6FB0', home: '#6FA58A', accent: '#5B7FA6' }],
@@ -1185,13 +1192,14 @@ function colorTokens(c, dark) {
 function applyColors() {
   let el = $('#user-colors');
   if (!el) { el = document.createElement('style'); el.id = 'user-colors'; document.head.appendChild(el); }
-  el.textContent = `:root{${colorTokens(S.colors, false)}}@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){${colorTokens(S.colors, true)}}}:root[data-theme="dark"]{${colorTokens(S.colors, true)}}`;
+  const c = { day: colorOf('day'), night: colorOf('night'), home: colorOf('home'), hol: colorOf('hol'), accent: S.colors.accent };
+  el.textContent = `:root{${colorTokens(c, false)}}@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){${colorTokens(c, true)}}}:root[data-theme="dark"]{${colorTokens(c, true)}}`;
 }
 function colorsBody() {
   const cur = JSON.stringify(COLOR_ROWS.map(([k]) => colorOf(k).toUpperCase()));
-  return `<div class="sec-h">Themes</div><div class="themes">${THEMES.map(([name, t], i) => { const full = COLOR_ROWS.map(([k]) => (t[k] || DEFC[k]).toUpperCase()); return `<button type="button" class="theme-btn${JSON.stringify(full) === cur ? ' on' : ''}" data-act="theme-pick" data-i="${i}"><b>${name}</b><span>${full.map(x => `<i style="background:${x}"></i>`).join('')}</span></button>`; }).join('')}</div>
-    ${COLOR_ROWS.map(([k, label]) => `<div class="sec-h">${label}</div><div class="group"><div class="cswatches">${SWATCH.map(x => `<button type="button" class="cs${colorOf(k).toUpperCase() === x ? ' on' : ''}" data-act="color-pick" data-k="${k}" data-c="${x}" style="--rc:${x}" aria-label="${label} ${x}"></button>`).join('')}<button type="button" class="cs custom${SWATCH.includes(colorOf(k).toUpperCase()) ? '' : ' on'}" style="--rc:${colorOf(k)}" data-act="picker-open" data-k="${k}" aria-label="Custom ${label} color"></button></div></div>`).join('')}
-    <p class="foot">Changes apply right away. The last circle in each row opens a full color picker.</p>`;
+  const themes = THEMES.map(([name, t], i) => { const full = COLOR_ROWS.map(([k]) => (t[k] || DEFC[k]).toUpperCase()); return `<button type="button" class="theme-btn${JSON.stringify(full) === cur ? ' on' : ''}" data-act="theme-pick" data-i="${i}"><b>${name}</b><span>${full.map(x => `<i style="background:${x}"></i>`).join('')}</span></button>`; }).join('');
+  const rows = COLOR_ROWS.map(([k, label]) => { const now = colorOf(k).toUpperCase(); return `<div class="crow"><div class="crow-h"><span>${label}</span><i class="cnow" style="background:${now}"></i></div><div class="cline"><button type="button" class="cs custom${SWATCH.includes(now) ? '' : ' on'}" style="--rc:${now}" data-act="picker-open" data-k="${k}" aria-label="Custom ${label} color"></button><span class="cdiv"></span>${SWATCH.map(x => `<button type="button" class="cs${now === x ? ' on' : ''}" data-act="color-pick" data-k="${k}" data-c="${x}" style="--rc:${x}" aria-label="${label} ${x}"></button>`).join('')}</div></div>`; }).join('');
+  return `<div class="sec-h">Theme</div><div class="themes">${themes}</div><div class="sec-h">Colors</div><div class="group">${rows}</div><p class="foot">Tap a color to apply it. The rainbow circle opens the full picker with a live preview.</p>`;
 }
 function setColor(k, v, redraw = true) {
   if (!DEFC[k] || !HEX.test(v)) return;
@@ -1437,7 +1445,7 @@ function openDay(k) {
     st = `<div class="dstat h">${IC.house}<div><b>Days off · Day ${ci.pos - p.daysOn + 1} of ${p.daysOff}</b><small>${ci.tail ? `Night shift ends at ${fmt12(ci.et)}, then you're off` : ci.pos === p.daysOn + p.daysOff - 1 ? 'Last day off before the next hitch' : 'Home'}</small></div></div>`;
   }
   const rows = [];
-  const hol = holidayOn(k); if (hol) rows.push(`<div class="row"><span class="itile" style="--c:var(--tint)">${IC.flag}</span><span class="t"><b>${esc(hol)}</b><small>Federal holiday</small></span></div>`);
+  const hol = holidayOn(k); if (hol) rows.push(`<div class="row"><span class="itile" style="--c:var(--hol);color:var(--hol-ink)">${IC.flag}</span><span class="t"><b>${esc(hol)}</b><small>Federal holiday</small></span></div>`);
   S.certs.filter(c => c.expiry === k).forEach(c => rows.push(`<div class="row"><span class="itile" style="--c:var(--danger)">${IC.shield}</span><span class="t"><b>${esc(c.name)}</b><small>Expires this day</small></span></div>`));
   const crew = S.rosters.map(r => { const on = dayType(k, r) === 'on'; return `<div class="row"><span class="avatar sm" style="--av:${r.color};--avi:${inkFor(r.color)}">${avInner(r)}</span><span class="t"><b>${esc(r.name)}</b></span><span class="chip ${on ? 'c-gray' : 'c-home'}">${on ? 'On hitch' : 'Home'}</span></div>`; }).join('');
   openSheet({
@@ -1708,16 +1716,16 @@ async function shareFamily() {
   copyText(`${text} ${link}`, 'Link copied. Paste it in a text.');
 }
 
-/* ───────── More + Certifications ───────── */
+/* ───────── Settings + Certifications ───────── */
 function renderMore() {
   const p = S.pattern, exp = S.certs.filter(c => certState(c).n <= 30).length;
-  $('#more-body').innerHTML = `<h1 class="lt">More</h1>
+  $('#more-body').innerHTML = `<h1 class="lt">Settings</h1>
   <div class="group"><button class="row" data-act="edit-hitch" style="padding-block:12px"><span class="avatar lg">${avInner(S)}</span><span class="t"><b style="font-size:20px;font-weight:700">${esc(S.name || 'My hitch')}</b><small>${patText(p)} · ${p.alternating ? 'Days and nights' : shiftName(p.shiftType)} · ${fmt12(p.startTime)} to ${fmt12(p.endTime)}</small></span>${IC.chev}</button></div>
   <div class="group ic" style="margin-top:20px"><button class="row" data-act="certs-open"><span class="itile" style="--c:var(--home)">${IC.shield}</span><span class="t"><b>Certifications</b></span>${exp ? `<span class="chip c-warn">${exp} need${exp === 1 ? 's' : ''} attention</span>` : `<span class="v">${S.certs.length || 'None'}</span>`}${IC.chev}</button></div>
   <div class="sec-h">Appearance</div>
   <div class="group ic"><div class="row"><span class="itile" style="--c:var(--night)">${IC.paint}</span><span class="t"><b>Theme</b></span><span class="seg sm" data-change="theme">${['system', 'light', 'dark'].map(t => `<button data-act="seg" data-val="${t}" class="${S.theme === t ? 'on' : ''}">${t === 'system' ? 'Auto' : t[0].toUpperCase() + t.slice(1)}</button>`).join('')}</span></div>
-    <button class="row" data-act="colors-open"><span class="itile" style="--c:var(--tint)">${IC.star}</span><span class="t"><b>Colors and themes</b></span><span class="cdots">${COLOR_ROWS.map(([k]) => `<i style="background:${colorOf(k)}"></i>`).join('')}</span>${IC.chev}</button>
-    <div class="row"><span class="itile" style="--c:var(--tint)">${IC.flag}</span><span class="t"><b>Holiday labels</b><small>Name on each holiday's day</small></span><button class="switch${S.showHolidays ? ' on' : ''}" role="switch" aria-checked="${!!S.showHolidays}" aria-label="Holiday artwork" data-act="switch" data-change="toggle-hol"></button></div></div>
+    <button class="row" data-act="colors-open"><span class="itile" style="--c:var(--tint);color:var(--on-tint)">${IC.star}</span><span class="t"><b>Colors and themes</b></span><span class="cdots">${COLOR_ROWS.map(([k]) => `<i style="background:${colorOf(k)}"></i>`).join('')}</span>${IC.chev}</button>
+    <div class="row"><span class="itile" style="--c:var(--hol);color:var(--hol-ink)">${IC.flag}</span><span class="t"><b>Holiday labels</b><small>Name on each holiday's day</small></span><button class="switch${S.showHolidays ? ' on' : ''}" role="switch" aria-checked="${!!S.showHolidays}" aria-label="Holiday artwork" data-act="switch" data-change="toggle-hol"></button></div></div>
   <div class="sec-h">Your data</div>
   <div class="group ic"><button class="row" data-act="pdf-open"><span class="itile" style="--c:var(--danger)">${IC.cal}</span><span class="t"><b>Year calendar PDF</b><small>One page with your year and holidays, for family</small></span>${IC.chev}</button>
     <button class="row" data-act="export-ics"><span class="itile" style="--c:var(--day)">${IC.cal}</span><span class="t"><b>Export to a calendar app</b><small>A year of hitches as an .ics file</small></span>${IC.chev}</button>

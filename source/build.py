@@ -9,10 +9,10 @@ OLD_APP = pathlib.Path('/mnt/user-data/outputs/hitchcal-app.html')
 DARK = ("color-scheme:dark;--bg:#000000;--surface:#1E1F23;--surface-up:#2C2D31;--sheet:#1E1F23;--cell:#1E1F23;"
         "--fill:rgba(120,120,128,.24);--fill-2:rgba(120,120,128,.38);--seg-on:#636366;--sep:rgba(84,84,88,.62);"
         "--label:#FFFFFF;--label-2:rgba(235,235,245,.64);--label-3:rgba(235,235,245,.3);--bar:rgba(20,20,22,.8);"
-        "--tint:#5B8DB8;--tint-text:#8DB5DA;--on-tint:#0B0B0D;--tint-soft:rgba(91,141,184,.2);"
-        "--day:#0A84FF;--day-text:#74B8FF;--day-bg:rgba(10,132,255,.27);"
-        "--night:#5E5CE6;--night-text:#B0AEFF;--night-bg:rgba(94,92,230,.32);"
-        "--home:#30D158;--home-text:#3DDC68;--home-bg:rgba(48,209,88,.18);"
+        "--tint:#B9BEC6;--tint-text:#D9DCE1;--on-tint:#16171A;--tint-soft:rgba(185,190,198,.18);"
+        "--day:#5F84A8;--day-text:#ACBFD2;--day-bg:rgba(95,132,168,0.3);"
+        "--night:#6E6C9C;--night-text:#B4B3CC;--night-bg:rgba(110,108,156,0.3);"
+        "--home:#5E9470;--home-text:#ABC7B5;--home-bg:rgba(94,148,112,0.3);"
         "--danger:#FF453A;--danger-text:#FF6961;--danger-bg:rgba(255,69,58,.18);"
         "--warn-text:#FFB340;--warn-bg:rgba(255,159,10,.2);"
         "--toast-bg:rgba(235,235,240,.96);--toast-ink:#000000;--scrim:rgba(0,0,0,.55)")
@@ -46,7 +46,7 @@ def build():
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>HitchCal · Rotation schedule and hitch pay</title>
 <meta name="description" content="{DESC}">
-<meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#EFF0F2" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -77,7 +77,7 @@ img{{max-width:100%}}
 
     (DIST / 'manifest.webmanifest').write_text(json.dumps({
         "name": "HitchCal", "short_name": "HitchCal", "description": DESC, "start_url": ".", "scope": ".",
-        "display": "standalone", "orientation": "portrait", "background_color": "#000000", "theme_color": "#000000",
+        "display": "standalone", "orientation": "portrait", "background_color": "#2A2C30", "theme_color": "#1E1F23",
         "categories": ["productivity", "business"],
         "icons": [{"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
                   {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
@@ -85,7 +85,7 @@ img{{max-width:100%}}
     }, indent=2))
 
     (DIST / 'sw.js').write_text('''// HitchCal offline support: try the network first so updates land, fall back to the saved copy on a bad signal.
-const CACHE = 'hitchcal-v8';
+const CACHE = 'hitchcal-v9';
 const SHELL = ['./', 'manifest.webmanifest', 'icon-192.png', 'favicon.svg'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL))); self.skipWaiting(); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k))))); self.clients.claim(); });

@@ -519,11 +519,12 @@ function applyTheme() {
 
 /* ───────── colors and themes ───────── */
 const HEX = /^#[0-9a-f]{6}$/i;
-const DEFC = { day: '#007AFF', night: '#5856D6', home: '#34C759', accent: '#5B8DB8', hol: '#64D2FF' };
+const DEFC = { day: '#5F84A8', night: '#6E6C9C', home: '#5E9470', accent: '#6C7077', hol: '#C2A06A' };
 const COLOR_ROWS = [['day', 'Day shift'], ['night', 'Night shift'], ['home', 'Days off'], ['accent', 'Buttons and highlights'], ['hol', 'Holiday labels']];
-const SWATCH = ['#007AFF', '#0E9F8E', '#34C759', '#84B816', '#FF9F0A', '#FF7A3D', '#FF3B30', '#E8508C', '#A855F7', '#5856D6', '#5B7FA6', '#8E8E93'];
+const SWATCH = ['#6C7077', '#B9BEC6', '#5F84A8', '#6E6C9C', '#5E9470', '#7E7C68', '#C2A06A', '#8E6A5A', '#007AFF', '#34C759', '#FF9F0A', '#FF3B30'];
 const THEMES = [
-  ['Classic', {}],
+  ['Graphite', {}],
+  ['Bright', { day: '#007AFF', night: '#5856D6', home: '#34C759', accent: '#5B8DB8', hol: '#64D2FF' }],
   ['Sunrise', { day: '#FF7A3D', night: '#4B4FC4', home: '#2E9E68', accent: '#FF7A3D' }],
   ['Pine', { day: '#0E9F8E', night: '#3F5BA9', home: '#84B816', accent: '#0E9F8E' }],
   ['Slate', { day: '#5B7FA6', night: '#7A6FB0', home: '#6FA58A', accent: '#5B7FA6' }],
@@ -547,13 +548,14 @@ function colorTokens(c, dark) {
 function applyColors() {
   let el = $('#user-colors');
   if (!el) { el = document.createElement('style'); el.id = 'user-colors'; document.head.appendChild(el); }
-  el.textContent = `:root{${colorTokens(S.colors, false)}}@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){${colorTokens(S.colors, true)}}}:root[data-theme="dark"]{${colorTokens(S.colors, true)}}`;
+  const c = { day: colorOf('day'), night: colorOf('night'), home: colorOf('home'), hol: colorOf('hol'), accent: S.colors.accent };
+  el.textContent = `:root{${colorTokens(c, false)}}@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){${colorTokens(c, true)}}}:root[data-theme="dark"]{${colorTokens(c, true)}}`;
 }
 function colorsBody() {
   const cur = JSON.stringify(COLOR_ROWS.map(([k]) => colorOf(k).toUpperCase()));
-  return `<div class="sec-h">Themes</div><div class="themes">${THEMES.map(([name, t], i) => { const full = COLOR_ROWS.map(([k]) => (t[k] || DEFC[k]).toUpperCase()); return `<button type="button" class="theme-btn${JSON.stringify(full) === cur ? ' on' : ''}" data-act="theme-pick" data-i="${i}"><b>${name}</b><span>${full.map(x => `<i style="background:${x}"></i>`).join('')}</span></button>`; }).join('')}</div>
-    ${COLOR_ROWS.map(([k, label]) => `<div class="sec-h">${label}</div><div class="group"><div class="cswatches">${SWATCH.map(x => `<button type="button" class="cs${colorOf(k).toUpperCase() === x ? ' on' : ''}" data-act="color-pick" data-k="${k}" data-c="${x}" style="--rc:${x}" aria-label="${label} ${x}"></button>`).join('')}<button type="button" class="cs custom${SWATCH.includes(colorOf(k).toUpperCase()) ? '' : ' on'}" style="--rc:${colorOf(k)}" data-act="picker-open" data-k="${k}" aria-label="Custom ${label} color"></button></div></div>`).join('')}
-    <p class="foot">Changes apply right away. The last circle in each row opens a full color picker.</p>`;
+  const themes = THEMES.map(([name, t], i) => { const full = COLOR_ROWS.map(([k]) => (t[k] || DEFC[k]).toUpperCase()); return `<button type="button" class="theme-btn${JSON.stringify(full) === cur ? ' on' : ''}" data-act="theme-pick" data-i="${i}"><b>${name}</b><span>${full.map(x => `<i style="background:${x}"></i>`).join('')}</span></button>`; }).join('');
+  const rows = COLOR_ROWS.map(([k, label]) => { const now = colorOf(k).toUpperCase(); return `<div class="crow"><div class="crow-h"><span>${label}</span><i class="cnow" style="background:${now}"></i></div><div class="cline"><button type="button" class="cs custom${SWATCH.includes(now) ? '' : ' on'}" style="--rc:${now}" data-act="picker-open" data-k="${k}" aria-label="Custom ${label} color"></button><span class="cdiv"></span>${SWATCH.map(x => `<button type="button" class="cs${now === x ? ' on' : ''}" data-act="color-pick" data-k="${k}" data-c="${x}" style="--rc:${x}" aria-label="${label} ${x}"></button>`).join('')}</div></div>`; }).join('');
+  return `<div class="sec-h">Theme</div><div class="themes">${themes}</div><div class="sec-h">Colors</div><div class="group">${rows}</div><p class="foot">Tap a color to apply it. The rainbow circle opens the full picker with a live preview.</p>`;
 }
 function setColor(k, v, redraw = true) {
   if (!DEFC[k] || !HEX.test(v)) return;
@@ -799,7 +801,7 @@ function openDay(k) {
     st = `<div class="dstat h">${IC.house}<div><b>Days off · Day ${ci.pos - p.daysOn + 1} of ${p.daysOff}</b><small>${ci.tail ? `Night shift ends at ${fmt12(ci.et)}, then you're off` : ci.pos === p.daysOn + p.daysOff - 1 ? 'Last day off before the next hitch' : 'Home'}</small></div></div>`;
   }
   const rows = [];
-  const hol = holidayOn(k); if (hol) rows.push(`<div class="row"><span class="itile" style="--c:var(--tint)">${IC.flag}</span><span class="t"><b>${esc(hol)}</b><small>Federal holiday</small></span></div>`);
+  const hol = holidayOn(k); if (hol) rows.push(`<div class="row"><span class="itile" style="--c:var(--hol);color:var(--hol-ink)">${IC.flag}</span><span class="t"><b>${esc(hol)}</b><small>Federal holiday</small></span></div>`);
   S.certs.filter(c => c.expiry === k).forEach(c => rows.push(`<div class="row"><span class="itile" style="--c:var(--danger)">${IC.shield}</span><span class="t"><b>${esc(c.name)}</b><small>Expires this day</small></span></div>`));
   const crew = S.rosters.map(r => { const on = dayType(k, r) === 'on'; return `<div class="row"><span class="avatar sm" style="--av:${r.color};--avi:${inkFor(r.color)}">${avInner(r)}</span><span class="t"><b>${esc(r.name)}</b></span><span class="chip ${on ? 'c-gray' : 'c-home'}">${on ? 'On hitch' : 'Home'}</span></div>`; }).join('');
   openSheet({
@@ -1070,16 +1072,16 @@ async function shareFamily() {
   copyText(`${text} ${link}`, 'Link copied. Paste it in a text.');
 }
 
-/* ───────── More + Certifications ───────── */
+/* ───────── Settings + Certifications ───────── */
 function renderMore() {
   const p = S.pattern, exp = S.certs.filter(c => certState(c).n <= 30).length;
-  $('#more-body').innerHTML = `<h1 class="lt">More</h1>
+  $('#more-body').innerHTML = `<h1 class="lt">Settings</h1>
   <div class="group"><button class="row" data-act="edit-hitch" style="padding-block:12px"><span class="avatar lg">${avInner(S)}</span><span class="t"><b style="font-size:20px;font-weight:700">${esc(S.name || 'My hitch')}</b><small>${patText(p)} · ${p.alternating ? 'Days and nights' : shiftName(p.shiftType)} · ${fmt12(p.startTime)} to ${fmt12(p.endTime)}</small></span>${IC.chev}</button></div>
   <div class="group ic" style="margin-top:20px"><button class="row" data-act="certs-open"><span class="itile" style="--c:var(--home)">${IC.shield}</span><span class="t"><b>Certifications</b></span>${exp ? `<span class="chip c-warn">${exp} need${exp === 1 ? 's' : ''} attention</span>` : `<span class="v">${S.certs.length || 'None'}</span>`}${IC.chev}</button></div>
   <div class="sec-h">Appearance</div>
   <div class="group ic"><div class="row"><span class="itile" style="--c:var(--night)">${IC.paint}</span><span class="t"><b>Theme</b></span><span class="seg sm" data-change="theme">${['system', 'light', 'dark'].map(t => `<button data-act="seg" data-val="${t}" class="${S.theme === t ? 'on' : ''}">${t === 'system' ? 'Auto' : t[0].toUpperCase() + t.slice(1)}</button>`).join('')}</span></div>
-    <button class="row" data-act="colors-open"><span class="itile" style="--c:var(--tint)">${IC.star}</span><span class="t"><b>Colors and themes</b></span><span class="cdots">${COLOR_ROWS.map(([k]) => `<i style="background:${colorOf(k)}"></i>`).join('')}</span>${IC.chev}</button>
-    <div class="row"><span class="itile" style="--c:var(--tint)">${IC.flag}</span><span class="t"><b>Holiday labels</b><small>Name on each holiday's day</small></span><button class="switch${S.showHolidays ? ' on' : ''}" role="switch" aria-checked="${!!S.showHolidays}" aria-label="Holiday artwork" data-act="switch" data-change="toggle-hol"></button></div></div>
+    <button class="row" data-act="colors-open"><span class="itile" style="--c:var(--tint);color:var(--on-tint)">${IC.star}</span><span class="t"><b>Colors and themes</b></span><span class="cdots">${COLOR_ROWS.map(([k]) => `<i style="background:${colorOf(k)}"></i>`).join('')}</span>${IC.chev}</button>
+    <div class="row"><span class="itile" style="--c:var(--hol);color:var(--hol-ink)">${IC.flag}</span><span class="t"><b>Holiday labels</b><small>Name on each holiday's day</small></span><button class="switch${S.showHolidays ? ' on' : ''}" role="switch" aria-checked="${!!S.showHolidays}" aria-label="Holiday artwork" data-act="switch" data-change="toggle-hol"></button></div></div>
   <div class="sec-h">Your data</div>
   <div class="group ic"><button class="row" data-act="pdf-open"><span class="itile" style="--c:var(--danger)">${IC.cal}</span><span class="t"><b>Year calendar PDF</b><small>One page with your year and holidays, for family</small></span>${IC.chev}</button>
     <button class="row" data-act="export-ics"><span class="itile" style="--c:var(--day)">${IC.cal}</span><span class="t"><b>Export to a calendar app</b><small>A year of hitches as an .ics file</small></span>${IC.chev}</button>
