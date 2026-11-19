@@ -514,3 +514,20 @@ pre.diag{white-space:pre-wrap;word-break:break-word;background:var(--surface);bo
 .upd button{flex:0 0 auto;border:0;border-radius:999px;padding:8px 14px;font:600 calc(15px*var(--ts)) var(--font);background:var(--tint);color:var(--on-tint)}
 /* Like iOS, bars keep their size when text is enlarged */
 .navbar,.tabbar{--ts:1}
+
+/* Insights: year at a glance */
+.glance{background:var(--surface);border-radius:var(--r-card);padding:14px 16px;margin-bottom:10px}
+.gl-top{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.gl-top b{font:700 calc(28px*var(--ts))/1 var(--font-num);color:var(--home-text)}
+.gl-top span{color:var(--label-2);font-size:calc(14px*var(--ts));min-width:0}
+.gl-bar{display:flex;gap:2px;height:12px;border-radius:6px;overflow:hidden;margin:12px 0 10px}
+.gl-bar i{display:block;min-width:2px}
+.gl-leg{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:calc(13px*var(--ts));color:var(--label-2)}
+.gl-leg span{display:inline-flex;align-items:center;gap:6px}.gl-leg i{width:9px;height:9px;border-radius:3px;display:block}
+.gl-leg b{color:var(--label);font-variant-numeric:tabular-nums}
+/* Family date status chips and calendar label */
+.chip.ok{background:var(--home-bg);color:var(--home-text)}
+.chip.miss{background:var(--fill);color:var(--label-2)}
+.cell .hl.fam{background:none;padding:0;font-size:calc(11px*var(--ts));line-height:13px;overflow:visible}
+.sec-title .txt-btn{margin-left:auto}
+

@@ -192,7 +192,7 @@ const DEF = () => ({
   pattern: { daysOn: 14, daysOff: 14, shiftType: 'day', startTime: '06:00', endTime: '18:00', alternating: false },
   earnings: { payType: 'dayrate', dayRate: 0, hourlyRate: 0, hoursPerShift: 12, otAfter: 8, perDiem: 0, mileageRate: 0, roundTrip: 0, travelDays: 0, travelRate: 0 },
   bonuses: [], certs: [], notes: {}, rosters: [], hitchMiles: {}, colors: {}, theme: 'system', showHolidays: true,
-  textSize: 'm', weekStart: 0, clock24: false, dist: 'mi', currency: 'USD', reduceMotion: false, haptics: true, seenVersion: ''
+  family: [], textSize: 'm', weekStart: 0, clock24: false, dist: 'mi', currency: 'USD', reduceMotion: false, haptics: true, seenVersion: ''
 });
 let S = DEF();
 
@@ -214,6 +214,9 @@ function normalize(p) {
     id: String(r.id || uid()).replace(/[^\w-]/g, ''), name: String(r.name), hitchStart: r.hitchStart, color: /^#[0-9a-f]{6}$/i.test(r.color || '') ? r.color : COLORS[0], icon: okIcon(r.icon), photo: okPhoto(r.photo),
     pattern: { daysOn: clampInt(r.pattern.daysOn, 1, 120), daysOff: clampInt(r.pattern.daysOff, 1, 120) }
   }));
+  s.family = (Array.isArray(s.family) ? s.family : []).filter(f => f && f.name && validKey(f.date)).slice(0, 60).map(f => ({
+    id: String(f.id || uid()).replace(/[^\w-]/g, ''), name: String(f.name).slice(0, 40), date: f.date,
+    kind: FAM_KINDS.some(([k]) => k === f.kind) ? f.kind : 'event', yearly: f.yearly !== false }));
   if (!['m', 'l', 'xl'].includes(s.textSize)) s.textSize = 'm';
   s.weekStart = s.weekStart ? 1 : 0; s.clock24 = !!s.clock24; s.reduceMotion = !!s.reduceMotion; s.haptics = s.haptics !== false;
   if (s.dist !== 'km') s.dist = 'mi';
@@ -318,6 +321,30 @@ function holidayOn(key) {
   const y = +key.slice(0, 4);
   if (!holCache[y]) { holCache[y] = {}; holidays(y).forEach(h => { holCache[y][toKey(h.date)] = h.name; }); }
   return holCache[y][key] || null;
+}
+/* ───────── family dates: birthdays, anniversaries, events ───────── */
+const FAM_KINDS = [['birthday', 'Birthday', '🎂'], ['anniversary', 'Anniversary', '💍'], ['event', 'Event', '⭐']];
+const famEmoji = k => (FAM_KINDS.find(([x]) => x === k) || FAM_KINDS[2])[2];
+/* The date a family entry falls on in a given year; yearly Feb 29 lands on Feb 28 in other years. */
+function famIn(f, y) {
+  const [fy, fm, fd] = f.date.split('-').map(Number);
+  if (!f.yearly) return fy === y ? parseKey(f.date) : null;
+  const dim = new Date(y, fm, 0).getDate();
+  return new Date(y, fm - 1, Math.min(fd, dim));
+}
+/* Every family date between two days, inclusive, sorted. */
+function famBetween(from, to) {
+  const out = [];
+  for (let y = from.getFullYear(); y <= to.getFullYear(); y++) S.family.forEach(f => { const d = famIn(f, y); if (d && d >= from && d <= to) out.push({ f, d, k: toKey(d) }); });
+  return out.sort((x, z) => x.d - z.d);
+}
+const famCache = { sig: '', map: {} };
+function familyOn(key) {
+  const sig = JSON.stringify(S.family);
+  if (famCache.sig !== sig) famCache.map = {}, famCache.sig = sig;
+  const y = +key.slice(0, 4);
+  if (!famCache.map[y]) { famCache.map[y] = {}; S.family.forEach(f => { const d = famIn(f, y); if (d) (famCache.map[y][toKey(d)] = famCache.map[y][toKey(d)] || []).push(f); }); }
+  return famCache.map[y][key] || null;
 }
 const HOL_SHORT = { "New Year's Day": 'New Yr', 'MLK Day': 'MLK', 'Presidents Day': 'Pres.', 'Memorial Day': 'Memor.', 'Juneteenth': 'Juneth.', 'Independence Day': 'July 4', 'Labor Day': 'Labor', 'Columbus Day': 'Columb.', 'Veterans Day': 'Vets', 'Thanksgiving': 'Thanks', 'Christmas Day': 'Xmas' };
 
@@ -758,6 +785,7 @@ function renderToday() {
     const n = daysBetween(today, hd.date);
     if (n >= 0 && n <= 30) { const off = dayType(toKey(hd.date), sch) === 'off'; items.push({ date: hd.date, c: 'var(--tint)', ic: IC.flag, title: hd.name, sub: `${fmtDay(hd.date)} · ${off ? "You're off" : "You're on hitch"}`, tag: rel(hd.date), k: toKey(hd.date) }); }
   }));
+  famBetween(today, addDays(today, 30)).forEach(({ f, d, k }) => { const off = dayType(k, sch) === 'off'; items.push({ date: d, emoji: famEmoji(f.kind), title: f.name, sub: `${fmtDay(d)} · ${off ? "You're home" : "You're on hitch"}`, tag: rel(d), k }); });
   Object.keys(S.notes).forEach(k => { const n = daysBetween(today, parseKey(k)); if (n >= 0 && n <= 30) { const nt = S.notes[k]; items.push({ date: parseKey(k), emoji: nt.emoji || '📝', title: nt.text || 'Note', sub: fmtDay(parseKey(k)), tag: rel(parseKey(k)), k }); } });
   items.sort((a, b) => a.date - b.date);
   h += `<div class="sec-title">Coming up</div>`;
@@ -766,12 +794,90 @@ function renderToday() {
     <span class="t"><b>${esc(it.title)}</b><small>${esc(it.sub)}</small></span>${it.chip ? `<span class="chip ${it.chip}">${esc(it.tag)}</span>` : `<span class="v" style="font-size:calc(15px*var(--ts))">${esc(it.tag)}</span>`}</button>`).join('')}</div>`
     : '<p class="foot">Nothing due in the next 30 days.</p>';
   const y0 = now.getFullYear();
+  h += yearHTML(y0, sch, today) + familyHTML(sch, today) + togetherHTML(sch, today);
   if (holYear !== y0 && holYear !== y0 + 1) holYear = y0;
   const hs = holidays(holYear), offN = hs.filter(x => dayType(toKey(x.date), sch) === 'off').length;
   h += `<div class="sec-title">Holidays<span class="seg sm" data-change="hol-year"><button data-act="seg" data-val="${y0}" class="${holYear === y0 ? 'on' : ''}">${y0}</button><button data-act="seg" data-val="${y0 + 1}" class="${holYear === y0 + 1 ? 'on' : ''}">${y0 + 1}</button></span></div>
     <p class="foot" style="margin:-4px 0 10px;padding:0">Home for ${offN} of ${hs.length} federal holidays.</p>
     <div class="hol-grid">${hs.map(x => { const off = dayType(toKey(x.date), sch) === 'off'; return `<button class="hol${off ? ' off' : ''}" data-act="day" data-k="${toKey(x.date)}"><b>${esc(x.name)}</b><small>${fmtMD(x.date)} · ${off ? 'Off' : 'On hitch'}</small></button>`; }).join('')}</div>`;
   $('#today-body').innerHTML = h;
+}
+
+/* Home vs away and travel totals for the calendar year */
+function yearHTML(y, sch, today) {
+  let day = 0, night = 0, home = 0, homeSoFar = 0, soFar = 0;
+  for (let d = new Date(y, 0, 1); d.getFullYear() === y; d = addDays(d, 1)) {
+    const k = toKey(d), on = dayType(k, sch) === 'on';
+    if (on) { if (shiftFor(k, sch) === 'night') night++; else day++; } else home++;
+    if (d <= today) { soFar++; if (!on) homeSoFar++; }
+  }
+  const tot = day + night + home, pct = n => Math.round(n / tot * 100), du = DU().u;
+  const bar = [['night', night], ['day', day], ['home', home]].filter(([, n]) => n).map(([c, n]) => `<i style="flex:${n};background:var(--${c})"></i>`).join('');
+  const legend = [['day', 'Day shifts', day], ['night', 'Night shifts', night], ['home', 'Home', home]].filter(([, , n]) => n).map(([c, l, n]) => `<span><i style="background:var(--${c})"></i>${l} <b>${n}</b></span>`).join('');
+  const trips = yearHitches(y).filter(x => x.key === toKey(x.first)), done = trips.filter(x => x.worked > 0);
+  const mi = list => list.reduce((t, x) => t + milesFor(x.key), 0), rate = num(S.earnings.mileageRate);
+  const milesSoFar = mi(done), milesYear = mi(trips);
+  const tile2 = rate > 0
+    ? `<div class="tile"><small>Mileage pay so far</small><b>${money(milesSoFar * rate)}</b><small>${money(milesYear * rate)} this year</small></div>`
+    : `<div class="tile"><small>Crew change trips</small><b>${done.length}</b><small>${trips.length} this year</small></div>`;
+  return `<div class="sec-title">${y} at a glance</div>
+    <div class="glance"><div class="gl-top"><b>${pct(home)}%</b><span>of the year at home · ${homeSoFar} of ${soFar} days so far</span></div>
+      <div class="gl-bar" role="img" aria-label="${home} days home, ${day + night} days on hitch">${bar}</div>
+      <div class="gl-leg">${legend}</div></div>
+    <div class="tiles"><div class="tile"><small>Driven so far</small><b>${milesSoFar.toLocaleString('en-US')} ${du}</b><small>${milesYear.toLocaleString('en-US')} ${du} this year</small></div>${tile2}</div>`;
+}
+/* Family dates over the next 12 months: home or on hitch */
+function familyHTML(sch, today) {
+  const add = `<button class="txt-btn" data-act="fam-add">Add</button>`;
+  if (!S.family.length) return `<div class="sec-title">Family dates${add}</div>
+    <div class="group ic"><button class="row" data-act="fam-add"><span class="itile e">🎂</span><span class="t"><b>Add birthdays and anniversaries</b><small>See which ones you'll be home for, months ahead</small></span>${IC.chev}</button></div>`;
+  const up = famBetween(today, addDays(today, 364)), homeN = up.filter(x => dayType(x.k, sch) === 'off').length;
+  const rows = up.slice(0, 5).map(({ f, d, k }) => {
+    const off = dayType(k, sch) === 'off';
+    return `<button class="row" data-act="fam-edit" data-id="${f.id}"><span class="itile e">${famEmoji(f.kind)}</span><span class="t"><b>${esc(f.name)}</b><small>${fmtDay(d)} · ${rel(d)}</small></span><span class="chip ${off ? 'ok' : 'miss'}">${off ? 'Home' : 'On hitch'}</span></button>`;
+  }).join('');
+  return `<div class="sec-title">Family dates${add}</div>
+    <p class="foot" style="margin:-4px 0 10px;padding:0">${up.length ? `Home for ${homeN} of ${up.length} in the next 12 months.` : 'None in the next 12 months.'}</p>
+    ${rows ? `<div class="group ic">${rows}</div>` : ''}${up.length > 5 ? `<p class="foot" style="padding:6px 0 0;margin:0">${up.length - 5} more later in the year. They're marked on your calendar.</p>` : ''}`;
+}
+/* Days off that line up with each crew member you follow */
+function togetherHTML(sch, today) {
+  if (!S.rosters.length) return '';
+  const rows = S.rosters.map(r => {
+    let start = null, len = 0, n90 = 0, best = null;
+    for (let i = 0; i < 365; i++) {
+      const k = toKey(addDays(today, i)), both = dayType(k, sch) === 'off' && dayType(k, r) === 'off';
+      if (both && i < 90) n90++;
+      if (!best) { if (both) { if (!start) start = addDays(today, i); len++; } else if (start) best = { start, len }; }
+    }
+    if (!best && start) best = { start, len };
+    const when = best ? `${fmtMD(best.start)}${best.len > 1 ? '–' + (addDays(best.start, best.len - 1).getMonth() === best.start.getMonth() ? addDays(best.start, best.len - 1).getDate() : fmtMD(addDays(best.start, best.len - 1))) : ''} · ${best.len} day${best.len === 1 ? '' : 's'}` : 'No days off together in the next year';
+    return `<button class="row" data-act="crew-edit" data-id="${r.id}"><span class="avatar sm" style="--av:${r.color};--avi:${inkFor(r.color)}">${avInner(r)}</span><span class="t"><b>${esc(r.name)}</b><small>${best ? 'Next off together: ' : ''}${when}</small></span><span class="v">${n90} in 90 days</span></button>`;
+  }).join('');
+  return `<div class="sec-title">Days off together</div><div class="group ic">${rows}</div>`;
+}
+
+/* Family date editor */
+function openFamily(id) {
+  const f = S.family.find(x => x.id === id), kind = f ? f.kind : 'birthday';
+  openSheet({
+    title: f ? 'Edit family date' : 'Add family date', right: f ? 'Save' : 'Add',
+    body: `<div class="group form" style="margin-top:6px"><label class="row"><span class="k">Name</span><input type="text" id="fa-name" placeholder="Mom's birthday" maxlength="40" autocomplete="off" value="${esc(f ? f.name : '')}"></label>
+      <label class="row"><span class="k">Date</span><input type="date" id="fa-date" value="${esc(f ? f.date : '')}"></label>
+      <div class="row"><span class="k">Type</span><span class="seg sm" data-change="fam-kind" id="fa-kind">${FAM_KINDS.map(([k, l]) => `<button type="button" data-act="seg" data-val="${k}" class="${kind === k ? 'on' : ''}">${l}</button>`).join('')}</span></div>
+      <div class="row"><span class="t"><b>Every year</b></span><button type="button" class="switch${!f || f.yearly ? ' on' : ''}" role="switch" aria-checked="${!f || f.yearly}" aria-label="Every year" data-act="switch" data-change="fam-yearly" id="fa-yearly"></button></div></div>
+      <p class="foot">It shows on your calendar, and Insights tells you whether you'll be home for it.</p>
+      ${f ? '<button class="btn del" data-act="fam-del">Delete family date</button>' : ''}`,
+    onOpen(body) { body.dataset.id = id || ''; },
+    onPrimary() {
+      const name = $('#fa-name').value.trim(), date = $('#fa-date').value;
+      if (!name) return toast('Add a name');
+      if (!validKey(date)) return toast('Pick the date');
+      const kind = ($('#fa-kind .on') || {}).dataset ? $('#fa-kind .on').dataset.val : 'event', yearly = $('#fa-yearly').classList.contains('on');
+      if (f) Object.assign(f, { name, date, kind, yearly }); else S.family.push({ id: uid(), name, date, kind, yearly });
+      save(); closeSheet(); render(); toast(f ? 'Family date saved' : 'Family date added');
+    }
+  });
 }
 
 /* ───────── Calendar ───────── */
@@ -809,7 +915,7 @@ function dayCell(d, month, i0) {
     }
     if (out) cls.push('out');
     if (k === tk) cls.push('now');
-    const hol = S.showHolidays ? holidayOn(k) : null, note = S.notes[k];
+    const hol = S.showHolidays ? holidayOn(k) : null, note = S.notes[k], fam = familyOn(k);
     let bars = '';
     S.rosters.slice(0, 5).forEach((r, ri) => {
       if (dayType(k, r) !== 'on') return;
@@ -817,7 +923,7 @@ function dayCell(d, month, i0) {
       bars += `<span class="bar${s ? ' s' : ''}${e ? ' e' : ''}${named ? ' nm' : ''}" style="--i:${ri};--rc:${r.color};--ri:${inkFor(r.color)}">${named ? `<span>${esc(r.name.split(/\s+/)[0].slice(0, 12))}</span>` : ''}</span>`;
     });
     const label = `${fmtLong(d)}, ${ci.type === 'on' ? 'on hitch' : 'off'}${hol ? ', ' + hol : ''}`;
-    h += `<button class="${cls.join(' ')}" data-act="day" data-k="${k}" style="${style}" aria-label="${esc(label)}"><span class="bgl"></span><span class="dn">${d.getDate()}</span>${hol ? `<span class="hl">${esc(HOL_SHORT[hol] || hol)}</span>` : ''}${note ? (note.emoji ? `<span class="em">${esc(note.emoji)}</span>` : '<span class="nd"></span>') : ''}${certDays.has(k) ? `<span class="ce">${IC.alert}</span>` : ''}${bars}</button>`;
+    h += `<button class="${cls.join(' ')}" data-act="day" data-k="${k}" style="${style}" aria-label="${esc(label)}"><span class="bgl"></span><span class="dn">${d.getDate()}</span>${hol ? `<span class="hl">${esc(HOL_SHORT[hol] || hol)}</span>` : fam ? `<span class="hl fam" title="${esc(fam.map(f => f.name).join(', '))}">${fam.map(f => famEmoji(f.kind)).slice(0, 2).join('')}</span>` : ''}${note ? (note.emoji ? `<span class="em">${esc(note.emoji)}</span>` : '<span class="nd"></span>') : ''}${certDays.has(k) ? `<span class="ce">${IC.alert}</span>` : ''}${bars}</button>`;
   }
   return h;
 }
@@ -841,6 +947,7 @@ function listHTML() {
     if (ci.type === 'on' && ci.pos === p.daysOn - 1 && !ci.crosses) ev.push([col, `Last shift · off at ${fmt12(ci.et)}`]);
     if (ci.type === 'off' && ci.pos === p.daysOn) ev.push(['var(--home)', ci.tail ? `Off at ${fmt12(ci.et)} · days off start` : 'Days off start']);
     const hol = holidayOn(k); if (hol) ev.push(['var(--tint)', `${hol} · ${ci.type === 'on' ? 'on hitch' : 'off'}`]);
+    (familyOn(k) || []).forEach(f => ev.push(['var(--hol)', `${famEmoji(f.kind)} ${f.name} · ${ci.type === 'on' ? 'on hitch' : 'home'}`]));
     S.certs.forEach(c => { if (c.expiry === k) ev.push(['var(--danger)', `${c.name} expires`]); });
     S.rosters.forEach(r => { const rp = posOf(k, r).pos; if (rp === 0) ev.push([r.color, `${r.name} starts a hitch`]); else if (rp === r.pattern.daysOn) ev.push([r.color, `${r.name} is home`]); });
     const nt = S.notes[k]; if (nt) ev.push(['var(--label-3)', `${nt.emoji ? nt.emoji + ' ' : ''}${nt.text || 'Note'}`]);
@@ -870,6 +977,7 @@ function openDay(k) {
     st = `<div class="dstat h">${IC.house}<div><b>Days off · Day ${ci.pos - p.daysOn + 1} of ${p.daysOff}</b><small>${ci.tail ? `Night shift ends at ${fmt12(ci.et)}, then you're off` : ci.pos === p.daysOn + p.daysOff - 1 ? 'Last day off before the next hitch' : 'Home'}</small></div></div>`;
   }
   const rows = [];
+  (familyOn(k) || []).forEach(f => rows.push(`<button class="row" data-act="fam-edit" data-id="${f.id}"><span class="itile e">${famEmoji(f.kind)}</span><span class="t"><b>${esc(f.name)}</b><small>${esc(FAM_KINDS.find(([x]) => x === f.kind)[1])}${f.yearly ? ' · every year' : ''}</small></span>${IC.chev}</button>`));
   const hol = holidayOn(k); if (hol) rows.push(`<div class="row"><span class="itile" style="--c:var(--hol);color:var(--hol-ink)">${IC.flag}</span><span class="t"><b>${esc(hol)}</b><small>Federal holiday</small></span></div>`);
   S.certs.filter(c => c.expiry === k).forEach(c => rows.push(`<div class="row"><span class="itile" style="--c:var(--danger)">${IC.shield}</span><span class="t"><b>${esc(c.name)}</b><small>Expires this day</small></span></div>`));
   const crew = S.rosters.map(r => { const on = dayType(k, r) === 'on'; return `<div class="row"><span class="avatar sm" style="--av:${r.color};--avi:${inkFor(r.color)}">${avInner(r)}</span><span class="t"><b>${esc(r.name)}</b></span><span class="chip ${on ? 'c-gray' : 'c-home'}">${on ? 'On hitch' : 'Home'}</span></div>`; }).join('');
@@ -1309,7 +1417,11 @@ function demoData() {
     earnings: { ...d.earnings, dayRate: 750, hourlyRate: 45, perDiem: 75, mileageRate: 0.7, roundTrip: 280, travelRate: 750 }, hitchStart: toKey(addDays(t, -8)),
     certs: [{ id: uid(), name: 'H2S Alive', expiry: toKey(addDays(t, 24)) }, { id: uid(), name: 'First Aid / CPR', expiry: toKey(addDays(t, 210)) }],
     rosters: [{ id: uid(), name: 'Jimmy', icon: 'worm', photo: '', hitchStart: toKey(addDays(t, -3)), color: COLORS[0], pattern: { daysOn: 7, daysOff: 7 } }],
-    notes: { [toKey(addDays(t, 3))]: { text: "Mom's birthday", emoji: '🎂' } },
+    notes: { [toKey(addDays(t, 12))]: { text: 'Truck inspection', emoji: '🔧' } },
+    family: [{ id: uid(), name: "Mom's birthday", date: toKey(addDays(t, 3)).replace(/^\d{4}/, '1961'), kind: 'birthday', yearly: true },
+      { id: uid(), name: 'Anniversary', date: toKey(addDays(t, 45)).replace(/^\d{4}/, '2014'), kind: 'anniversary', yearly: true },
+      { id: uid(), name: "Kayden's birthday", date: toKey(addDays(t, 130)).replace(/^\d{4}/, '2016'), kind: 'birthday', yearly: true },
+      { id: uid(), name: 'Football playoff game', date: toKey(addDays(t, 19)), kind: 'event', yearly: false }],
     bonuses: [{ id: uid(), label: 'Safety bonus', amount: 500, date: toKey(addDays(t, -30)) }]
   };
 }
@@ -1397,6 +1509,11 @@ const A = {
   'certs-open': () => { if (tab !== 'more') showTab('more'); renderCerts(); const pg = $('#page-certs'); $('.scroll', pg).scrollTop = 0; pg.classList.add('open'); },
   'page-back': () => { $('#page-certs').classList.remove('open'); render(); },
   'cert-add': () => openCert(null),
+  'fam-add': () => openFamily(null),
+  'fam-edit': el => openFamily(el.dataset.id),
+  'fam-kind': v => { if (v === 'event') { const sw = $('#fa-yearly'); if (sw && sw.classList.contains('on') && !$('#sheet-body').dataset.id) { sw.classList.remove('on'); sw.setAttribute('aria-checked', 'false'); } } },
+  'fam-yearly': () => {},
+  'fam-del': () => { const id = $('#sheet-body').dataset.id; S.family = S.family.filter(f => f.id !== id); save(); closeSheet(); render(); toast('Family date deleted'); },
   'cert-edit': el => openCert(el.dataset.id),
   'cert-pick': el => { $('#ce-name').value = el.textContent; },
   'cert-del': () => { const id = $('#sheet-body').dataset.id; S.certs = S.certs.filter(c => c.id !== id); save(); closeSheet(); render(); renderCerts(); toast('Certification deleted'); },
