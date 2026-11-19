@@ -10,9 +10,9 @@ DARK = ("color-scheme:dark;--bg:#000000;--surface:#1E1F23;--surface-up:#2C2D31;-
         "--fill:rgba(120,120,128,.24);--fill-2:rgba(120,120,128,.38);--seg-on:#636366;--sep:rgba(84,84,88,.62);"
         "--label:#FFFFFF;--label-2:rgba(235,235,245,.64);--label-3:rgba(235,235,245,.3);--bar:rgba(20,20,22,.8);"
         "--tint:#B9BEC6;--tint-text:#D9DCE1;--on-tint:#16171A;--tint-soft:rgba(185,190,198,.18);"
-        "--day:#5F84A8;--day-text:#ACBFD2;--day-bg:rgba(95,132,168,0.3);"
-        "--night:#6E6C9C;--night-text:#B4B3CC;--night-bg:rgba(110,108,156,0.3);"
-        "--home:#5E9470;--home-text:#ABC7B5;--home-bg:rgba(94,148,112,0.3);"
+        "--day:#5287B8;--day-text:#A5C1DA;--day-bg:rgba(82,135,184,0.3);--day-cell:rgba(82,135,184,0.55);"
+        "--night:#7B67AD;--night-text:#BAB0D4;--night-bg:rgba(123,103,173,0.3);--night-cell:rgba(123,103,173,0.55);"
+        "--home:#5E9470;--home-text:#ABC7B5;--home-bg:rgba(94,148,112,0.3);--home-cell:rgba(94,148,112,0.55);"
         "--danger:#FF453A;--danger-text:#FF6961;--danger-bg:rgba(255,69,58,.18);"
         "--warn-text:#FFB340;--warn-bg:rgba(255,159,10,.2);"
         "--toast-bg:rgba(235,235,240,.96);--toast-ink:#000000;--scrim:rgba(0,0,0,.55)")

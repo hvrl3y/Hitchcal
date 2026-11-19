@@ -519,9 +519,9 @@ function applyTheme() {
 
 /* ───────── colors and themes ───────── */
 const HEX = /^#[0-9a-f]{6}$/i;
-const DEFC = { day: '#5F84A8', night: '#6E6C9C', home: '#5E9470', accent: '#6C7077', hol: '#C2A06A' };
+const DEFC = { day: '#5287B8', night: '#7B67AD', home: '#5E9470', accent: '#6C7077', hol: '#C2A06A' };
 const COLOR_ROWS = [['day', 'Day shift'], ['night', 'Night shift'], ['home', 'Days off'], ['accent', 'Buttons and highlights'], ['hol', 'Holiday labels']];
-const SWATCH = ['#6C7077', '#B9BEC6', '#5F84A8', '#6E6C9C', '#5E9470', '#7E7C68', '#C2A06A', '#8E6A5A', '#007AFF', '#34C759', '#FF9F0A', '#FF3B30'];
+const SWATCH = ['#6C7077', '#B9BEC6', '#5287B8', '#7B67AD', '#5E9470', '#7E7C68', '#C2A06A', '#8E6A5A', '#007AFF', '#34C759', '#FF9F0A', '#FF3B30'];
 const THEMES = [
   ['Graphite', {}],
   ['Bright', { day: '#007AFF', night: '#5856D6', home: '#34C759', accent: '#5B8DB8', hol: '#64D2FF' }],
@@ -539,7 +539,7 @@ function colorTokens(c, dark) {
   let o = '';
   ['day', 'night', 'home'].forEach(n => {
     const x = c[n]; if (!x) return;
-    o += `--${n}:${x};--${n}-bg:${mix(x, dark ? 30 : 15, 'transparent')};--${n}-text:${dark ? mix(x, 52, '#fff') : mix(x, 66, '#000')};--hero-${n}-a:${mix(x, 88, '#000')};--hero-${n}-b:${mix(x, 62, '#000')};`;
+    o += `--${n}:${x};--${n}-bg:${mix(x, dark ? 30 : 15, 'transparent')};--${n}-cell:${mix(x, dark ? 55 : 34, 'transparent')};--${n}-text:${dark ? mix(x, 52, '#fff') : mix(x, 66, '#000')};--hero-${n}-a:${mix(x, 88, '#000')};--hero-${n}-b:${mix(x, 62, '#000')};`;
   });
   const hc = c.hol || DEFC.hol; o += `--hol:${hc};--hol-ink:${inkFor(hc)};`;
   if (c.accent) o += `--tint:${c.accent};--on-tint:${inkFor(c.accent)};--tint-soft:${mix(c.accent, dark ? 22 : 17, 'transparent')};--tint-text:${dark ? mix(c.accent, 62, '#fff') : mix(c.accent, 60, '#000')};`;
@@ -586,7 +586,7 @@ function hexToHsv(hex) {
 }
 const isDarkNow = () => { const t = document.documentElement.dataset.theme; return t === 'dark' || (t !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches); };
 function previewHTML(k) {
-  const cell = (n, on, extra = '') => `<span class="pv-cell" style="${on ? `background:var(--${k === 'hol' ? 'fill' : k}-bg)` : 'background:var(--fill)'}"><b style="color:${on ? `var(--${k}-text)` : 'var(--label-3)'}">${n}</b>${extra}</span>`;
+  const cell = (n, on, extra = '') => `<span class="pv-cell" style="${on ? `background:var(--${k === 'hol' ? 'fill' : k}-cell)` : 'background:var(--fill)'}"><b style="color:${on ? `var(--${k}-text)` : 'var(--label-3)'}">${n}</b>${extra}</span>`;
   const days = [1, 2, 3, 4, 5, 6, 7];
   if (k === 'day' || k === 'night') {
     return `<div class="pv-row">${days.map(n => cell(n, n <= 5, n <= 5 ? `<i class="pv-bar" style="background:var(--${k})"></i>` : '')).join('')}</div>

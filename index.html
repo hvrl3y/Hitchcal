@@ -32,14 +32,14 @@
   --label:#0B0B0F; --label-2:rgba(60,60,67,.68); --label-3:rgba(60,60,67,.36);
   --bar:rgba(244,245,247,.84);
   --tint:#4E5157; --tint-text:#24262A; --on-tint:#FFFFFF; --tint-soft:rgba(78,81,87,.13);
-  --day:#5F84A8; --day-text:#3F576F; --day-bg:rgba(95,132,168,0.15);
-  --night:#6E6C9C; --night-text:#494767; --night-bg:rgba(110,108,156,0.15);
-  --home:#5E9470; --home-text:#3E624A; --home-bg:rgba(94,148,112,0.15);
+  --day:#5287B8; --day-text:#365979; --day-bg:rgba(82,135,184,0.15); --day-cell:rgba(82,135,184,0.34);
+  --night:#7B67AD; --night-text:#514472; --night-bg:rgba(123,103,173,0.15); --night-cell:rgba(123,103,173,0.34);
+  --home:#5E9470; --home-text:#3E624A; --home-bg:rgba(94,148,112,0.15); --home-cell:rgba(94,148,112,0.34);
   --danger:#FF3B30; --danger-text:#D12A20; --danger-bg:rgba(255,59,48,.12);
   --warn-text:#A85600; --warn-bg:rgba(255,149,0,.17);
   --hero-ink:#FFFFFF; --knob:#FFFFFF;
-  --hero-day-a:#547494; --hero-day-b:#3B5268;
-  --hero-night-a:#615F89; --hero-night-b:#444361;
+  --hero-day-a:#4877A2; --hero-day-b:#335472;
+  --hero-night-a:#6C5B98; --hero-night-b:#4C406B;
   --hero-home-a:#538263; --hero-home-b:#3A5C45;
   --toast-bg:rgba(28,28,30,.94); --toast-ink:#FFFFFF;
   --scrim:rgba(0,0,0,.36);
@@ -49,8 +49,8 @@
   --sat:0px; --sab:0px; --tabh:calc(52px + var(--sab)); --side:0px;
   --ease:cubic-bezier(.32,.72,0,1);
 }
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#000000;--surface:#1E1F23;--surface-up:#2C2D31;--sheet:#1E1F23;--cell:#1E1F23;--fill:rgba(120,120,128,.24);--fill-2:rgba(120,120,128,.38);--seg-on:#636366;--sep:rgba(84,84,88,.62);--label:#FFFFFF;--label-2:rgba(235,235,245,.64);--label-3:rgba(235,235,245,.3);--bar:rgba(20,20,22,.8);--tint:#B9BEC6;--tint-text:#D9DCE1;--on-tint:#16171A;--tint-soft:rgba(185,190,198,.18);--day:#5F84A8;--day-text:#ACBFD2;--day-bg:rgba(95,132,168,0.3);--night:#6E6C9C;--night-text:#B4B3CC;--night-bg:rgba(110,108,156,0.3);--home:#5E9470;--home-text:#ABC7B5;--home-bg:rgba(94,148,112,0.3);--danger:#FF453A;--danger-text:#FF6961;--danger-bg:rgba(255,69,58,.18);--warn-text:#FFB340;--warn-bg:rgba(255,159,10,.2);--toast-bg:rgba(235,235,240,.96);--toast-ink:#000000;--scrim:rgba(0,0,0,.55)}}
-:root[data-theme="dark"]{color-scheme:dark;--bg:#000000;--surface:#1E1F23;--surface-up:#2C2D31;--sheet:#1E1F23;--cell:#1E1F23;--fill:rgba(120,120,128,.24);--fill-2:rgba(120,120,128,.38);--seg-on:#636366;--sep:rgba(84,84,88,.62);--label:#FFFFFF;--label-2:rgba(235,235,245,.64);--label-3:rgba(235,235,245,.3);--bar:rgba(20,20,22,.8);--tint:#B9BEC6;--tint-text:#D9DCE1;--on-tint:#16171A;--tint-soft:rgba(185,190,198,.18);--day:#5F84A8;--day-text:#ACBFD2;--day-bg:rgba(95,132,168,0.3);--night:#6E6C9C;--night-text:#B4B3CC;--night-bg:rgba(110,108,156,0.3);--home:#5E9470;--home-text:#ABC7B5;--home-bg:rgba(94,148,112,0.3);--danger:#FF453A;--danger-text:#FF6961;--danger-bg:rgba(255,69,58,.18);--warn-text:#FFB340;--warn-bg:rgba(255,159,10,.2);--toast-bg:rgba(235,235,240,.96);--toast-ink:#000000;--scrim:rgba(0,0,0,.55)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#000000;--surface:#1E1F23;--surface-up:#2C2D31;--sheet:#1E1F23;--cell:#1E1F23;--fill:rgba(120,120,128,.24);--fill-2:rgba(120,120,128,.38);--seg-on:#636366;--sep:rgba(84,84,88,.62);--label:#FFFFFF;--label-2:rgba(235,235,245,.64);--label-3:rgba(235,235,245,.3);--bar:rgba(20,20,22,.8);--tint:#B9BEC6;--tint-text:#D9DCE1;--on-tint:#16171A;--tint-soft:rgba(185,190,198,.18);--day:#5287B8;--day-text:#A5C1DA;--day-bg:rgba(82,135,184,0.3);--day-cell:rgba(82,135,184,0.55);--night:#7B67AD;--night-text:#BAB0D4;--night-bg:rgba(123,103,173,0.3);--night-cell:rgba(123,103,173,0.55);--home:#5E9470;--home-text:#ABC7B5;--home-bg:rgba(94,148,112,0.3);--home-cell:rgba(94,148,112,0.55);--danger:#FF453A;--danger-text:#FF6961;--danger-bg:rgba(255,69,58,.18);--warn-text:#FFB340;--warn-bg:rgba(255,159,10,.2);--toast-bg:rgba(235,235,240,.96);--toast-ink:#000000;--scrim:rgba(0,0,0,.55)}}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#000000;--surface:#1E1F23;--surface-up:#2C2D31;--sheet:#1E1F23;--cell:#1E1F23;--fill:rgba(120,120,128,.24);--fill-2:rgba(120,120,128,.38);--seg-on:#636366;--sep:rgba(84,84,88,.62);--label:#FFFFFF;--label-2:rgba(235,235,245,.64);--label-3:rgba(235,235,245,.3);--bar:rgba(20,20,22,.8);--tint:#B9BEC6;--tint-text:#D9DCE1;--on-tint:#16171A;--tint-soft:rgba(185,190,198,.18);--day:#5287B8;--day-text:#A5C1DA;--day-bg:rgba(82,135,184,0.3);--day-cell:rgba(82,135,184,0.55);--night:#7B67AD;--night-text:#BAB0D4;--night-bg:rgba(123,103,173,0.3);--night-cell:rgba(123,103,173,0.55);--home:#5E9470;--home-text:#ABC7B5;--home-bg:rgba(94,148,112,0.3);--home-cell:rgba(94,148,112,0.55);--danger:#FF453A;--danger-text:#FF6961;--danger-bg:rgba(255,69,58,.18);--warn-text:#FFB340;--warn-bg:rgba(255,159,10,.2);--toast-bg:rgba(235,235,240,.96);--toast-ink:#000000;--scrim:rgba(0,0,0,.55)}
 
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%}
@@ -229,8 +229,8 @@ button.row:active,.card-btn:active{background:var(--fill)}
 @keyframes goR{from{transform:translateX(-28px);opacity:.25}}
 .cell{position:relative;border-radius:10px;padding:4px;display:flex;flex-direction:column;align-items:flex-start;gap:1px;min-width:0;--c:transparent;--a:0%;--b:100%}
 .cell .bgl{position:absolute;inset:0;border-radius:inherit;overflow:hidden;background:linear-gradient(90deg,transparent 0 var(--a),var(--c) var(--a) var(--b),transparent var(--b) 100%),var(--cell)}
-.cell.d{--c:var(--day-bg)}
-.cell.n{--c:var(--night-bg)}
+.cell.d{--c:var(--day-cell)}
+.cell.n{--c:var(--night-cell)}
 .cell.out{opacity:.38}
 .cell:active .bgl{filter:brightness(.93)}
 .cell:focus-visible{outline-offset:-2px}
@@ -256,8 +256,8 @@ button.row:active,.card-btn:active{background:var(--fill)}
 .mini-name.cur{color:var(--tint-text)}
 .mini-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:1.5px}
 .mini-grid i{font-style:normal;font-size:8.5px;aspect-ratio:1;display:grid;place-items:center;border-radius:3px;color:var(--label-2);font-variant-numeric:tabular-nums}
-.mini-grid i.d{background:var(--day-bg);color:var(--day-text);font-weight:600}
-.mini-grid i.n{background:var(--night-bg);color:var(--night-text);font-weight:600}
+.mini-grid i.d{background:var(--day-cell);color:var(--day-text);font-weight:600}
+.mini-grid i.n{background:var(--night-cell);color:var(--night-text);font-weight:600}
 .mini-grid i.t{background:var(--tint);color:var(--on-tint);font-weight:700}
 .ag-month{font-size:20px;font-weight:700;margin:20px 0 8px;letter-spacing:-.01em}
 .ag-month:first-child{margin-top:2px}
@@ -1163,9 +1163,9 @@ function applyTheme() {
 
 /* ───────── colors and themes ───────── */
 const HEX = /^#[0-9a-f]{6}$/i;
-const DEFC = { day: '#5F84A8', night: '#6E6C9C', home: '#5E9470', accent: '#6C7077', hol: '#C2A06A' };
+const DEFC = { day: '#5287B8', night: '#7B67AD', home: '#5E9470', accent: '#6C7077', hol: '#C2A06A' };
 const COLOR_ROWS = [['day', 'Day shift'], ['night', 'Night shift'], ['home', 'Days off'], ['accent', 'Buttons and highlights'], ['hol', 'Holiday labels']];
-const SWATCH = ['#6C7077', '#B9BEC6', '#5F84A8', '#6E6C9C', '#5E9470', '#7E7C68', '#C2A06A', '#8E6A5A', '#007AFF', '#34C759', '#FF9F0A', '#FF3B30'];
+const SWATCH = ['#6C7077', '#B9BEC6', '#5287B8', '#7B67AD', '#5E9470', '#7E7C68', '#C2A06A', '#8E6A5A', '#007AFF', '#34C759', '#FF9F0A', '#FF3B30'];
 const THEMES = [
   ['Graphite', {}],
   ['Bright', { day: '#007AFF', night: '#5856D6', home: '#34C759', accent: '#5B8DB8', hol: '#64D2FF' }],
@@ -1183,7 +1183,7 @@ function colorTokens(c, dark) {
   let o = '';
   ['day', 'night', 'home'].forEach(n => {
     const x = c[n]; if (!x) return;
-    o += `--${n}:${x};--${n}-bg:${mix(x, dark ? 30 : 15, 'transparent')};--${n}-text:${dark ? mix(x, 52, '#fff') : mix(x, 66, '#000')};--hero-${n}-a:${mix(x, 88, '#000')};--hero-${n}-b:${mix(x, 62, '#000')};`;
+    o += `--${n}:${x};--${n}-bg:${mix(x, dark ? 30 : 15, 'transparent')};--${n}-cell:${mix(x, dark ? 55 : 34, 'transparent')};--${n}-text:${dark ? mix(x, 52, '#fff') : mix(x, 66, '#000')};--hero-${n}-a:${mix(x, 88, '#000')};--hero-${n}-b:${mix(x, 62, '#000')};`;
   });
   const hc = c.hol || DEFC.hol; o += `--hol:${hc};--hol-ink:${inkFor(hc)};`;
   if (c.accent) o += `--tint:${c.accent};--on-tint:${inkFor(c.accent)};--tint-soft:${mix(c.accent, dark ? 22 : 17, 'transparent')};--tint-text:${dark ? mix(c.accent, 62, '#fff') : mix(c.accent, 60, '#000')};`;
@@ -1230,7 +1230,7 @@ function hexToHsv(hex) {
 }
 const isDarkNow = () => { const t = document.documentElement.dataset.theme; return t === 'dark' || (t !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches); };
 function previewHTML(k) {
-  const cell = (n, on, extra = '') => `<span class="pv-cell" style="${on ? `background:var(--${k === 'hol' ? 'fill' : k}-bg)` : 'background:var(--fill)'}"><b style="color:${on ? `var(--${k}-text)` : 'var(--label-3)'}">${n}</b>${extra}</span>`;
+  const cell = (n, on, extra = '') => `<span class="pv-cell" style="${on ? `background:var(--${k === 'hol' ? 'fill' : k}-cell)` : 'background:var(--fill)'}"><b style="color:${on ? `var(--${k}-text)` : 'var(--label-3)'}">${n}</b>${extra}</span>`;
   const days = [1, 2, 3, 4, 5, 6, 7];
   if (k === 'day' || k === 'night') {
     return `<div class="pv-row">${days.map(n => cell(n, n <= 5, n <= 5 ? `<i class="pv-bar" style="background:var(--${k})"></i>` : '')).join('')}</div>
