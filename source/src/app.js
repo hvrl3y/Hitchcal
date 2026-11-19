@@ -81,6 +81,9 @@ const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
 
 const svg = (p, extra = '') => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" ${extra}>${p}</svg>`;
 const IC = {
+  phone: svg('<rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M10.5 18.5h3"/>'),
+  plusSq: svg('<rect x="4" y="4" width="16" height="16" rx="4"/><path d="M12 8.5v7M8.5 12h7"/>'),
+  dots: svg('<circle cx="12" cy="5.5" r="1.2" fill="currentColor"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/><circle cx="12" cy="18.5" r="1.2" fill="currentColor"/>'),
   textsize: svg('<path d="M4 18L9 6l5 12M5.6 14h6.8M15 18l3-7 3 7M15.9 16h4.2"/>'),
   motion: svg('<path d="M3 12h3l2.5-6 4 12 3-9 1.5 3H21"/>'),
   vibrate: svg('<rect x="8" y="3" width="8" height="18" rx="2"/><path d="M4 8v8M20 8v8"/>'),
@@ -192,7 +195,7 @@ const DEF = () => ({
   pattern: { daysOn: 14, daysOff: 14, shiftType: 'day', startTime: '06:00', endTime: '18:00', alternating: false },
   earnings: { payType: 'dayrate', dayRate: 0, hourlyRate: 0, hoursPerShift: 12, otAfter: 8, perDiem: 0, mileageRate: 0, roundTrip: 0, travelDays: 0, travelRate: 0 },
   bonuses: [], certs: [], notes: {}, rosters: [], hitchMiles: {}, colors: {}, theme: 'system', showHolidays: true,
-  family: [], textSize: 'm', weekStart: 0, clock24: false, dist: 'mi', currency: 'USD', reduceMotion: false, haptics: true, seenVersion: ''
+  family: [], adjust: {}, dayChanges: {}, icsRem: { start: true, end: true, certs: true, family: true }, installDone: false, textSize: 'm', weekStart: 0, clock24: false, dist: 'mi', currency: 'USD', reduceMotion: false, haptics: true, seenVersion: ''
 });
 let S = DEF();
 
@@ -217,6 +220,13 @@ function normalize(p) {
   s.family = (Array.isArray(s.family) ? s.family : []).filter(f => f && f.name && validKey(f.date)).slice(0, 60).map(f => ({
     id: String(f.id || uid()).replace(/[^\w-]/g, ''), name: String(f.name).slice(0, 40), date: f.date,
     kind: FAM_KINDS.some(([k]) => k === f.kind) ? f.kind : 'event', yearly: f.yearly !== false }));
+  const ci = n => Math.max(-60, Math.min(60, Math.round(num(n))));
+  s.adjust = Object.fromEntries(Object.entries(s.adjust && typeof s.adjust === 'object' ? s.adjust : {}).filter(([k, v]) => validKey(k) && v && typeof v === 'object')
+    .map(([k, v]) => [k, { s: ci(v.s), e: ci(v.e), push: !!v.push }]).filter(([, v]) => v.s || v.e));
+  s.dayChanges = Object.fromEntries(Object.entries(s.dayChanges && typeof s.dayChanges === 'object' ? s.dayChanges : {}).filter(([k, v]) => validKey(k) && v && (v.t === 'on' || v.t === 'off'))
+    .map(([k, v]) => [k, { t: v.t, why: ['sick', 'swap', 'called', 'off'].includes(v.why) ? v.why : 'off' }]));
+  if (validKey(s.hitchStart)) { const C = s.pattern.daysOn + s.pattern.daysOff; Object.keys(s.adjust).forEach(k => { const d = daysBetween(parseKey(s.hitchStart), parseKey(k)); if (((d % C) + C) % C) delete s.adjust[k]; }); }
+  const ir = s.icsRem && typeof s.icsRem === 'object' ? s.icsRem : {}; s.icsRem = { start: ir.start !== false, end: ir.end !== false, certs: ir.certs !== false, family: ir.family !== false };
   if (!['m', 'l', 'xl'].includes(s.textSize)) s.textSize = 'm';
   s.weekStart = s.weekStart ? 1 : 0; s.clock24 = !!s.clock24; s.reduceMotion = !!s.reduceMotion; s.haptics = s.haptics !== false;
   if (s.dist !== 'km') s.dist = 'mi';
@@ -232,7 +242,7 @@ function load() {
   } catch (e) { S = DEF(); }
 }
 function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* storage unavailable: keep running in memory */ } }
-const me = () => ({ hitchStart: S.hitchStart, pattern: S.pattern });
+const me = () => ({ hitchStart: S.hitchStart, pattern: S.pattern, adjust: S.adjust, dayChanges: S.dayChanges });
 
 const COLORS = ['#14B8A6', '#EC4899', '#A855F7', '#F97316', '#06B6D4', '#84CC16'];
 const inkFor = hex => { const n = parseInt(hex.slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255; return (r * 299 + g * 587 + b * 114) / 1000 > 150 ? '#14141A' : '#FFFFFF'; };
@@ -244,63 +254,109 @@ function posOf(key, sch) {
   const diff = daysBetween(parseKey(sch.hitchStart), parseKey(key));
   return { pos: ((diff % cycle) + cycle) % cycle, diff, cycle };
 }
-const dayType = (key, sch) => posOf(key, sch).pos < sch.pattern.daysOn ? 'on' : 'off';
-function shiftFor(key, sch) {
-  const p = sch.pattern;
-  if (!p.alternating) return p.shiftType || 'day';
-  const { pos, diff, cycle } = posOf(key, sch);
-  const n = Math.round((diff - pos) / cycle);
-  const even = ((n % 2) + 2) % 2 === 0;
-  return even ? p.shiftType : (p.shiftType === 'day' ? 'night' : 'day');
-}
-function timesFor(key, sch) {
-  const p = sch.pattern, shift = shiftFor(key, sch);
-  let st = p.startTime || '06:00', et = p.endTime || '18:00';
-  if (p.alternating && shift !== p.shiftType) [st, et] = [et, st];
-  return { st, et, shift, crosses: frac(et) <= frac(st) };
-}
-/* What a single calendar day looks like: on/off, shift, and the worked slice [a,b] of the day (0..1). */
-function cellInfo(key, sch) {
-  const { pos } = posOf(key, sch), p = sch.pattern, MIN = 0.04;
-  const t = timesFor(toKey(addDays(parseKey(key), -pos)), sch);
-  const sf = frac(t.st), ef = frac(t.et);
-  if (pos < p.daysOn) {
-    let a = 0, b = 1;
-    if (pos === 0 && sf > MIN) a = sf;
-    if (pos === p.daysOn - 1 && !t.crosses && 1 - ef > MIN) b = ef;
-    return { type: 'on', shift: t.shift, a, b, split: a > 0 || b < 1, pos, st: t.st, et: t.et, crosses: t.crosses };
+/* ───────── schedule engine ─────────
+   The pattern gives every hitch a scheduled place: hitch i starts hitchStart + i × cycle.
+   Hitch changes (sch.adjust, keyed by that scheduled start) move a hitch's first or last day;
+   with "push", every later hitch moves by the same number of days. Day changes
+   (sch.dayChanges) turn a single day on or off: a sick day, a swap, a call-in. */
+const sigOf = sch => { const p = sch.pattern; return `${sch.hitchStart}|${p.daysOn}|${p.daysOff}|${p.shiftType}|${p.alternating ? 1 : 0}|${p.startTime}|${p.endTime}|${sch.adjust ? JSON.stringify(sch.adjust) : ''}`; };
+const ENG = new Map();
+function engine(sch) {
+  const sig = sigOf(sch); let E = ENG.get(sig); if (E) return E;
+  const p = sch.pattern, C = p.daysOn + p.daysOff, H0 = parseKey(sch.hitchStart), adj = sch.adjust || {};
+  const items = Object.keys(adj).filter(validKey).map(k => ({ i: Math.round(daysBetween(H0, parseKey(k)) / C), a: adj[k] }));
+  const pushes = items.filter(x => x.a.push && x.a.e).map(x => ({ i: x.i, e: x.a.e }));
+  let reach = 1; items.forEach(x => { reach = Math.max(reach, 1 + Math.ceil((Math.abs(x.a.s || 0) + Math.abs(x.a.e || 0)) / C)); });
+  reach += Math.ceil(pushes.reduce((t, x) => t + Math.abs(x.e), 0) / C);
+  const shiftOff = i => pushes.reduce((t, x) => t + (x.i < i ? x.e : 0), 0), cache = new Map();
+  function H(i) {
+    let h = cache.get(i); if (h) return h;
+    const base = addDays(H0, i * C), key = toKey(base), a = adj[key] || {}, sFirst = addDays(base, shiftOff(i)), sLast = addDays(sFirst, p.daysOn - 1);
+    const first = addDays(sFirst, a.s || 0); let last = addDays(sLast, a.e || 0); if (last < first) last = first;
+    const even = ((i % 2) + 2) % 2 === 0, shift = !p.alternating ? (p.shiftType || 'day') : even ? p.shiftType : (p.shiftType === 'day' ? 'night' : 'day');
+    let st = p.startTime || '06:00', et = p.endTime || '18:00'; if (p.alternating && shift !== p.shiftType) [st, et] = [et, st];
+    h = { i, key, first, last, sFirst, sLast, days: daysBetween(first, last) + 1, shift, st, et, crosses: frac(et) <= frac(st), changed: !!(a.s || a.e), push: !!a.push };
+    cache.set(i, h); return h;
   }
-  if (pos === p.daysOn && t.crosses && ef > MIN) return { type: 'off', shift: t.shift, a: 0, b: ef, split: true, tail: true, pos, st: t.st, et: t.et, crosses: true };
-  return { type: 'off', shift: null, a: 0, b: 0, split: false, pos, st: t.st, et: t.et, crosses: t.crosses };
+  const guess = d => Math.floor(daysBetween(H0, d) / C);
+  /* The hitch covering day d (the earliest, if a held-over hitch runs into the next) and the hitches either side */
+  function around(d) {
+    const g = guess(d); let cur = null, prev = null, next = null;
+    for (let i = g - reach - 1; i <= g + reach + 1; i++) {
+      const h = H(i);
+      if (d >= h.first && d <= h.last) { if (!cur) cur = h; }
+      else if (h.last < d) { if (!prev || h.last > prev.last) prev = h; }
+      else if (!next || h.first < next.first) next = h;
+    }
+    if (cur) { prev = null; next = null; for (let i = g - reach - 1; i <= g + reach + 1; i++) { const h = H(i); if (h.i === cur.i) continue; if (h.last < cur.first && (!prev || h.last > prev.last)) prev = h; if (h.first > cur.last && (!next || h.first < next.first)) next = h; } }
+    return { cur, prev, next };
+  }
+  E = { H, around, guess, reach, C };
+  if (ENG.size > 40) ENG.clear();
+  ENG.set(sig, E); return E;
+}
+const dcOf = (key, sch) => (sch.dayChanges && sch.dayChanges[key]) || null;
+const baseType = (key, sch) => engine(sch).around(parseKey(key)).cur ? 'on' : 'off';
+const dayType = (key, sch) => { const dc = dcOf(key, sch); return dc ? dc.t : baseType(key, sch); };
+const nearHitch = (key, sch) => { const { cur, prev, next } = engine(sch).around(parseKey(key)); return cur || prev || next; };
+const shiftFor = (key, sch) => nearHitch(key, sch).shift;
+function timesFor(key, sch) { const h = nearHitch(key, sch); return { st: h.st, et: h.et, shift: h.shift, crosses: h.crosses }; }
+/* What a single calendar day looks like: on/off, shift, the worked slice [a,b] of the day (0..1),
+   its day number n of len in this stretch, and whether it differs from the regular pattern. */
+function cellInfo(key, sch) {
+  const d = parseKey(key), MIN = 0.04, { cur, prev, next } = engine(sch).around(d), dc = dcOf(key, sch), h = cur || prev || next;
+  const inSched = x => x && d >= x.sFirst && d <= x.sLast;
+  if (dc) {
+    const on = dc.t === 'on';
+    return { type: dc.t, shift: on ? h.shift : null, a: 0, b: on ? 1 : 0, split: false, n: 1, len: 1, first: false, last: false, offStart: false, pos: 0, st: h.st, et: h.et, crosses: h.crosses, dc, moved: true };
+  }
+  if (cur) {
+    const n = daysBetween(cur.first, d) + 1, isF = n === 1, isL = daysBetween(d, cur.last) === 0, sf = frac(cur.st), ef = frac(cur.et);
+    let a = 0, b = 1; if (isF && sf > MIN) a = sf; if (isL && !cur.crosses && 1 - ef > MIN) b = ef;
+    return { type: 'on', shift: cur.shift, a, b, split: a > 0 || b < 1, n, len: cur.days, first: isF, last: isL, offStart: false, pos: n - 1, st: cur.st, et: cur.et, crosses: cur.crosses, moved: !inSched(cur), hk: cur.key };
+  }
+  const pv = prev || h, n = prev ? daysBetween(prev.last, d) : 1, len = prev && next ? Math.max(1, daysBetween(prev.last, next.first) - 1) : sch.pattern.daysOff;
+  const tail = !!prev && n === 1 && prev.crosses && frac(prev.et) > MIN;
+  return { type: 'off', shift: tail ? prev.shift : null, a: 0, b: tail ? frac(prev.et) : 0, split: tail, tail, n, len, first: false, last: false, offStart: n === 1, finalOff: !!next && daysBetween(d, next.first) === 1, pos: sch.pattern.daysOn + n - 1, st: pv.st, et: pv.et, crosses: pv.crosses, moved: inSched(prev) || inSched(next) };
 }
 const atTime = (d, t) => { const [h, m] = t.split(':').map(Number); const x = new Date(d); x.setHours(h, m, 0, 0); return x; };
-/* Exact clock-in of the first shift and clock-out of the last one for the hitch whose first day is csDate. */
-function hitchBounds(csDate, sch) {
-  const t = timesFor(toKey(csDate), sch);
-  return { begin: atTime(csDate, t.st), end: atTime(addDays(csDate, sch.pattern.daysOn - (t.crosses ? 0 : 1)), t.et), shift: t.shift, st: t.st, et: t.et };
+/* Clock-in of a hitch's first shift and clock-out of its last one */
+const boundsOf = h => ({ begin: atTime(h.first, h.st), end: atTime(addDays(h.last, h.crosses ? 1 : 0), h.et), shift: h.shift, st: h.st, et: h.et, key: h.key, days: h.days, first: h.first, last: h.last, i: h.i });
+function hitchBounds(csDate, sch) { return boundsOf(nearHitch(toKey(csDate), sch)); }
+/* Working days in a hitch after day changes (sick days come off, call-ins inside it stay) */
+function workDays(b, sch, upto) {
+  let n = 0; for (let d = new Date(b.first); d <= b.last && (!upto || d <= upto); d = addDays(d, 1)) if (dayType(toKey(d), sch) === 'on') n++;
+  return n;
 }
 function nowInfo(sch, now = new Date()) {
-  const today = startOfDay(now), p = sch.pattern;
-  const { pos, cycle } = posOf(toKey(today), sch);
-  const cs = addDays(today, -pos), cur = hitchBounds(cs, sch);
-  if (now < cur.begin) {
-    const prev = hitchBounds(addDays(cs, -cycle), sch);
-    return { phase: 'off', ms: cur.begin - now, until: cur.begin, dayNum: p.daysOff, total: p.daysOff, pct: clamp((now - prev.end) / (cur.begin - prev.end)), next: cur, cs };
+  const E = engine(sch), today = startOfDay(now), g = E.guess(today), list = [];
+  for (let i = g - E.reach - 2; i <= g + E.reach + 2; i++) list.push(boundsOf(E.H(i)));
+  list.sort((x, y) => x.begin - y.begin);
+  const cur = list.find(b => b.begin <= now && now < b.end);
+  if (cur) {
+    return { phase: 'on', ms: cur.end - now, until: cur.end, dayNum: clamp(daysBetween(cur.first, today) + 1, 1, cur.days), total: cur.days, pct: clamp((now - cur.begin) / (cur.end - cur.begin)), shift: cur.shift, cur, cs: cur.first,
+      hk: cur.key, work: workDays(cur, sch), worked: workDays(cur, sch, today) };
   }
-  if (now < cur.end) {
-    return { phase: 'on', ms: cur.end - now, until: cur.end, dayNum: Math.min(pos + 1, p.daysOn), total: p.daysOn, pct: clamp((now - cur.begin) / (cur.end - cur.begin)), shift: cur.shift, cur, cs };
-  }
-  const nx = hitchBounds(addDays(cs, cycle), sch);
-  return { phase: 'off', ms: nx.begin - now, until: nx.begin, dayNum: clamp(pos - p.daysOn + 1, 1, p.daysOff), total: p.daysOff, pct: clamp((now - cur.end) / (nx.begin - cur.end)), next: nx, cs };
+  const next = list.find(b => b.begin > now), prev = [...list].reverse().find(b => b.end <= now);
+  const total = Math.max(1, daysBetween(prev.last, next.first) - 1);
+  return { phase: 'off', ms: next.begin - now, until: next.begin, dayNum: clamp(daysBetween(prev.last, today), 1, total), total, pct: clamp((now - prev.end) / (next.begin - prev.end)), next, prev, cs: prev.first,
+    hk: next.key, work: workDays(next, sch), worked: 0 };
 }
+/* Upcoming hitch starts and ends from now on */
 function transitions(sch, n, now = new Date()) {
-  const info = nowInfo(sch, now), cycle = sch.pattern.daysOn + sch.pattern.daysOff, out = [];
-  for (let i = -1; i < n + 2; i++) {
-    const b = hitchBounds(addDays(info.cs, i * cycle), sch);
+  const E = engine(sch), g = E.guess(startOfDay(now)), out = [];
+  for (let i = g - E.reach - 1; i <= g + E.reach + n + 2; i++) {
+    const b = boundsOf(E.H(i));
     if (b.begin > now) out.push({ type: 'on', date: b.begin, shift: b.shift });
     if (b.end > now) out.push({ type: 'off', date: b.end });
   }
-  return out.sort((a, b) => a.date - b.date).slice(0, n);
+  return out.sort((x, y) => x.date - y.date).slice(0, n);
+}
+/* Hitches whose days fall between two dates, in order */
+function hitchesBetween(sch, from, to) {
+  const E = engine(sch), out = [];
+  for (let i = E.guess(from) - E.reach - 1; i <= E.guess(to) + E.reach + 1; i++) { const h = E.H(i); if (h.last >= from && h.first <= to) out.push(h); }
+  return out.sort((x, y) => x.first - y.first);
 }
 
 /* ───────── holidays ───────── */
@@ -389,13 +445,12 @@ function earnedPay(key, worked, days) {
   return hitchPay(worked, { mi: milesFor(key), travel: worked >= days ? n : Math.min(n, 1) });
 }
 function yearHitches(year) {
-  const sch = me(), tk = todayKey(), map = new Map();
+  const sch = me(), E = engine(sch), tk = todayKey(), map = new Map();
   for (let d = new Date(year, 0, 1); d.getFullYear() === year; d = addDays(d, 1)) {
-    const k = toKey(d), { pos, diff, cycle } = posOf(k, sch);
-    if (pos >= sch.pattern.daysOn) continue;
-    const n = Math.round((diff - pos) / cycle);
-    let h = map.get(n);
-    if (!h) { h = { key: toKey(addDays(d, -pos)), first: d, last: d, days: 0, worked: 0 }; map.set(n, h); }
+    const k = toKey(d); if (dayType(k, sch) !== 'on') continue;
+    const { cur, prev, next } = E.around(d), hh = cur || prev || next;
+    let h = map.get(hh.i);
+    if (!h) { h = { key: hh.key, start: hh.first, first: d, last: d, days: 0, worked: 0 }; map.set(hh.i, h); }
     h.last = d; h.days++; if (k <= tk) h.worked++;
   }
   return [...map.values()].map(h => ({ ...h, status: h.worked === 0 ? 'next' : h.worked < h.days ? 'now' : 'done' }));
@@ -452,20 +507,42 @@ function deliverFile(name, mime, text) {
     toast(`Saved ${name}`);
   } catch (e) { textSheet(name, text, 'Copy the text below and save it as ' + name + '.'); }
 }
+const icsText = t => String(t).replace(/\\/g, '\\\\').replace(/;/g, '\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
+const alarm = (trigger, text) => ['BEGIN:VALARM', 'ACTION:DISPLAY', `DESCRIPTION:${icsText(text)}`, `TRIGGER${trigger}`, 'END:VALARM'];
+/* A year of hitches as calendar events, with optional alerts the phone's calendar app will raise */
 function buildICS() {
-  const sch = me(), p = S.pattern, cycle = p.daysOn + p.daysOff, info = nowInfo(sch);
+  const sch = me(), rem = S.icsRem, today = startOfDay(new Date()), to = addDays(today, 366), travel = num(S.earnings.travelDays) > 0;
   const ymd = d => `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`;
   const n = new Date(), stamp = `${n.getUTCFullYear()}${pad(n.getUTCMonth() + 1)}${pad(n.getUTCDate())}T${pad(n.getUTCHours())}${pad(n.getUTCMinutes())}${pad(n.getUTCSeconds())}Z`;
   const out = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//HitchCal//HitchCal 2//EN', 'CALSCALE:GREGORIAN', 'X-WR-CALNAME:HitchCal'];
-  for (let i = 0; i <= Math.ceil(366 / cycle); i++) {
-    const cs = addDays(info.cs, i * cycle), t = timesFor(toKey(cs), sch);
-    out.push('BEGIN:VEVENT', `UID:hitch-${ymd(cs)}@hitchcal`, `DTSTAMP:${stamp}`, `DTSTART;VALUE=DATE:${ymd(cs)}`, `DTEND;VALUE=DATE:${ymd(addDays(cs, p.daysOn))}`,
-      `SUMMARY:On hitch (${plural(p.daysOn, 'day')})`, `DESCRIPTION:${t.shift === 'night' ? 'Night' : 'Day'} shift\\, ${fmt12(t.st)} to ${fmt12(t.et)}`, 'TRANSP:TRANSPARENT', 'END:VEVENT');
-  }
+  const allDay = (uid, d1, d2, summary, desc, alarms = []) => out.push('BEGIN:VEVENT', `UID:${uid}@hitchcal`, `DTSTAMP:${stamp}`, `DTSTART;VALUE=DATE:${ymd(d1)}`, `DTEND;VALUE=DATE:${ymd(d2)}`,
+    `SUMMARY:${icsText(summary)}`, ...(desc ? [`DESCRIPTION:${icsText(desc)}`] : []), 'TRANSP:TRANSPARENT', ...alarms, 'END:VEVENT');
+  hitchesBetween(sch, addDays(today, -1), to).forEach(h => {
+    const al = [];
+    if (rem.start) al.push(...alarm(':-PT6H', `${travel ? 'Travel and crew change' : 'Crew change'} tomorrow. ${shiftName(h.shift)} starts at ${fmt12(h.st)}.`));
+    if (rem.end) al.push(...alarm(';RELATED=END:-PT18H', `Last day of your hitch. Off at ${fmt12(h.et)}${h.crosses ? ' tomorrow morning' : ''}.`));
+    allDay(`hitch-${h.key}`, h.first, addDays(h.last, 1), `On hitch (${plural(h.days, 'day')})`, `${shiftName(h.shift)}, ${fmt12(h.st)} to ${fmt12(h.et)}`, al);
+  });
+  if (rem.certs) S.certs.filter(c => validKey(c.expiry) && parseKey(c.expiry) >= today).forEach(c => {
+    const d = parseKey(c.expiry);
+    allDay(`cert-${c.id || c.expiry}-${c.expiry}`, d, addDays(d, 1), `${c.name} expires`, 'Certification from HitchCal', [...alarm(':-P30D', `${c.name} expires in 30 days.`), ...alarm(':-P1D', `${c.name} expires tomorrow.`)]);
+  });
+  if (rem.family) famBetween(today, to).forEach(({ f, d, k }) => {
+    const off = dayType(k, sch) === 'off';
+    allDay(`fam-${f.id}-${k}`, d, addDays(d, 1), `${famEmoji(f.kind)} ${f.name}`, off ? "You're home that day." : "You're on hitch that day.",
+      alarm(':-P7D', off ? `${f.name} is in a week. You're home.` : `${f.name} is in a week, and you're on hitch. Plan a call.`));
+  });
   out.push('END:VCALENDAR');
   return out.join('\r\n');
 }
-
+function openExport() {
+  const sw = (k, label, sub) => `<div class="row"><span class="t"><b>${label}</b><small>${sub}</small></span><button type="button" class="switch${S.icsRem[k] ? ' on' : ''}" role="switch" aria-checked="${!!S.icsRem[k]}" aria-label="${label}" data-act="switch" data-change="ics-rem" data-k="${k}"></button></div>`;
+  openSheet({ title: 'Export to a calendar', left: 'Cancel', body: `<p class="foot" style="margin:2px 4px 12px">A year of hitches for your phone's calendar app. Turn on the alerts you want; your calendar app will remind you even when HitchCal is closed.</p>
+    <div class="sec-h" style="padding-top:0">Alerts</div>
+    <div class="group">${sw('start', 'Day before crew change', '6 PM the evening before each hitch')}${sw('end', 'Last day of each hitch', '6 AM on your last day')}${sw('certs', 'Certifications', '30 days and 1 day before each expires')}${sw('family', 'Family dates', 'A week ahead, with whether you\u2019re home')}</div>
+    <button class="btn primary" data-act="ics-go" style="margin-top:14px">${IC.cal}Export calendar file</button>
+    <p class="foot">iPhone Calendar keeps these alerts. Google Calendar uses your own default alerts instead.</p>` });
+}
 /* ───────── printable year (PDF) ───────── */
 function loadPdfLib() {
   return new Promise((res, rej) => {
@@ -777,7 +854,7 @@ function renderToday() {
   const now = new Date(), today = startOfDay(now), sch = me(), p = S.pattern, info = nowInfo(sch, now), on = info.phase === 'on';
   const cls = on ? (info.shift === 'night' ? 'night' : 'day') : 'home';
   $('#today-avatar').innerHTML = avInner(S);
-  const hk = toKey(on ? info.cs : info.until), full = fullPay(hk, p.daysOn), got = earnedPay(hk, on ? info.dayNum : 0, p.daysOn), mi = milesFor(hk);
+  const hk = info.hk, full = fullPay(hk, info.work), got = earnedPay(hk, on ? info.worked : 0, info.work), mi = milesFor(hk);
   const left = Math.max(info.total - info.dayNum, 0);
   let h = `<div class="eyebrow">${fmtLong(now)}</div><h1 class="lt">Insights</h1>`;
   if (S.demo) h += `<button class="banner" data-act="demo-setup"><span>You're looking at a sample schedule.</span><b>Set up yours</b>${IC.chev}</button>`;
@@ -787,7 +864,9 @@ function renderToday() {
     <div class="lead">${on ? 'Headed home in' : 'Back on hitch in'}</div>
     <div class="cd" data-cd="full">${cdHTML(info.ms, 'full')}</div>
     <div class="sub">${fmtDay(info.until)} at ${fmtClock(info.until)}</div>
+    <button type="button" class="hero-share" data-act="share-card" aria-label="Share your countdown">${IC.share}<span>Share</span></button>
   </div>`;
+  if (!isInstalled() && !S.installDone) h += `<div class="install-card"><span class="itile" style="--c:var(--day)">${IC.phone}</span><div class="t"><b>Put HitchCal on your home screen</b><small>Opens like an app and works without signal</small></div><button type="button" class="pill-btn" data-act="install-open">Show me</button><button type="button" class="x" data-act="install-dismiss" aria-label="Not now">×</button></div>`;
 
   const items = [];
   transitions(sch, 3, now).forEach(t => items.push({
@@ -829,7 +908,7 @@ function yearHTML(y, sch, today) {
   const tot = day + night + home, pct = n => Math.round(n / tot * 100), du = DU().u;
   const bar = [['night', night], ['day', day], ['home', home]].filter(([, n]) => n).map(([c, n]) => `<i style="flex:${n};background:var(--${c})"></i>`).join('');
   const legend = [['day', 'Day shifts', day], ['night', 'Night shifts', night], ['home', 'Home', home]].filter(([, , n]) => n).map(([c, l, n]) => `<span><i style="background:var(--${c})"></i>${l} <b>${n}</b></span>`).join('');
-  const trips = yearHitches(y).filter(x => x.key === toKey(x.first)), done = trips.filter(x => x.worked > 0);
+  const trips = yearHitches(y).filter(x => x.start.getFullYear() === y), done = trips.filter(x => x.worked > 0);
   const mi = list => list.reduce((t, x) => t + milesFor(x.key), 0), rate = num(S.earnings.mileageRate);
   const milesSoFar = mi(done), milesYear = mi(trips);
   const tile2 = rate > 0
@@ -895,6 +974,130 @@ function openFamily(id) {
   });
 }
 
+/* ───────── install guidance ───────── */
+let installPrompt = null;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installPrompt = e; });
+window.addEventListener('appinstalled', () => { S.installDone = true; save(); render(); });
+const isInstalled = () => (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+const platform = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ? 'ios' : /android/i.test(navigator.userAgent) ? 'android' : 'other';
+function installSteps(pf) {
+  const step = (n, ic, b, sm) => `<li><span class="st-n">${n}</span><span class="st-ic">${ic}</span><div><b>${b}</b>${sm ? `<small>${sm}</small>` : ''}</div></li>`;
+  return pf === 'android'
+    ? `<ol class="steps">${step(1, IC.dots, 'Tap the ⋮ menu', 'Top right in Chrome')}${step(2, IC.down, 'Tap Install app', 'Some phones say Add to Home screen')}${step(3, IC.phone, 'Open HitchCal from your home screen', 'It opens full screen, like any app')}</ol>`
+    : `<ol class="steps">${step(1, IC.share, 'Tap the Share button', 'At the bottom of Safari, or the top right in Chrome')}${step(2, IC.plusSq, 'Tap Add to Home Screen', 'Scroll down the list if you don’t see it')}${step(3, IC.phone, 'Tap Add, then open HitchCal', 'It opens full screen, like any app')}</ol>`;
+}
+function openInstall(pf = platform() === 'android' ? 'android' : 'ios') {
+  openSheet({ title: 'Add to Home Screen', left: 'Done', body: `<p class="foot" style="margin:2px 4px 14px">HitchCal is a web app: no app store needed. Once it's on your home screen it opens full screen, keeps your data on this phone, and works without signal.</p>
+    ${installPrompt && pf === 'android' ? `<button class="btn primary" data-act="install-prompt">${IC.down}Install HitchCal</button><div class="sec-h">Or do it yourself</div>` : ''}
+    <div class="seg" data-change="install-pf" style="margin:0 0 12px">${[['ios', 'iPhone'], ['android', 'Android']].map(([v, l]) => `<button type="button" data-act="seg" data-val="${v}" class="${pf === v ? 'on' : ''}">${l}</button>`).join('')}</div>
+    <div id="inst-steps">${installSteps(pf)}</div>
+    ${EMBEDDED ? '<p class="foot">This is a preview. Open HitchCal on its own site to add it to your home screen.</p>' : ''}` });
+}
+
+/* ───────── shareable countdown card ───────── */
+const mixHex = (hex, pct, w = '#000000') => { const h = x => [1, 3, 5].map(i => parseInt(x.slice(i, i + 2), 16)), A = h(hex), B = h(w); return '#' + A.map((v, i) => Math.round(v * pct / 100 + B[i] * (1 - pct / 100)).toString(16).padStart(2, '0')).join(''); };
+const loadImg = src => new Promise(res => { if (!src) return res(null); const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = src; });
+let cardFmt = 'post';
+async function drawCard(fmt, plain) {
+  const info = nowInfo(me()), on = info.phase === 'on', kind = on ? (info.shift === 'night' ? 'night' : 'day') : 'home', base = colorOf(kind);
+  const W = 1080, H = fmt === 'story' ? 1920 : 1350, c = document.createElement('canvas'); c.width = W; c.height = H;
+  const x = c.getContext('2d'), F = (w, px) => `${w} ${px}px Inter, -apple-system, "Segoe UI", system-ui, sans-serif`;
+  try { await document.fonts.load(F(800, 100)); await document.fonts.load(F(600, 40)); } catch (e) { /* system font is fine */ }
+  const g = x.createLinearGradient(0, 0, W * .6, H); g.addColorStop(0, mixHex(base, 92)); g.addColorStop(1, mixHex(base, 48)); x.fillStyle = g; x.fillRect(0, 0, W, H);
+  const glow = x.createRadialGradient(W * .2, H * .08, 0, W * .2, H * .08, W * .9); glow.addColorStop(0, 'rgba(255,255,255,.18)'); glow.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = glow; x.fillRect(0, 0, W, H);
+  const top = fmt === 'story' ? 330 : 110, M = 90;
+  // avatar and name
+  const av = 170, src = plain ? '' : S.photo || (S.icon && AV[S.icon] ? AVIMG[S.icon] : ''), im = await loadImg(src);
+  x.save(); x.beginPath(); x.arc(M + av / 2, top + av / 2, av / 2, 0, Math.PI * 2); x.closePath(); x.fillStyle = 'rgba(255,255,255,.22)'; x.fill(); x.clip();
+  if (im) { const sd = Math.min(im.naturalWidth, im.naturalHeight); x.drawImage(im, (im.naturalWidth - sd) / 2, (im.naturalHeight - sd) / 2, sd, sd, M, top, av, av); }
+  else { x.fillStyle = '#fff'; x.font = F(800, 70); x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(initials(S.name || 'Me'), M + av / 2, top + av / 2 + 4); }
+  x.restore(); x.lineWidth = 8; x.strokeStyle = 'rgba(255,255,255,.9)'; x.beginPath(); x.arc(M + av / 2, top + av / 2, av / 2, 0, Math.PI * 2); x.stroke();
+  x.textAlign = 'left'; x.textBaseline = 'alphabetic'; x.fillStyle = '#fff';
+  x.font = F(800, 54); x.fillText((S.name || 'On rotation').slice(0, 22), M + av + 40, top + 78);
+  x.globalAlpha = .85; x.font = F(600, 36); x.fillText(on ? `On hitch · ${shiftName(info.shift)}` : 'Days off', M + av + 40, top + 132); x.globalAlpha = 1;
+  // the number
+  const days = Math.floor(info.ms / 864e5), hours = Math.max(1, Math.round(info.ms / 36e5)), big = days >= 1 ? String(days) : String(hours);
+  const unit = days >= 1 ? (days === 1 ? 'day' : 'days') : (hours === 1 ? 'hour' : 'hours'), mid = fmt === 'story' ? 1060 : 640;
+  x.font = F(800, 420); x.fillText(big, M - 12, mid);
+  x.font = F(800, 84); x.fillText(unit, M, mid + 110);
+  x.globalAlpha = .9; x.font = F(600, 56); x.fillText(on ? "until I'm home" : 'until crew change', M, mid + 190); x.globalAlpha = 1;
+  // progress
+  const py = mid + 290, pw = W - M * 2;
+  x.fillStyle = 'rgba(255,255,255,.25)'; x.beginPath(); x.roundRect(M, py, pw, 22, 11); x.fill();
+  x.fillStyle = '#fff'; x.beginPath(); x.roundRect(M, py, Math.max(22, pw * info.pct), 22, 11); x.fill();
+  x.globalAlpha = .85; x.font = F(600, 36); x.fillText(`Day ${info.dayNum} of ${info.total}${on ? ' on hitch' : ' home'}`, M, py + 78);
+  x.textAlign = 'right'; x.fillText(`${on ? 'Home' : 'Back on'} ${fmtDay(info.until)}`, W - M, py + 78); x.textAlign = 'left'; x.globalAlpha = 1;
+  // brand
+  const mark = document.querySelector('.brand svg'), by = H - (fmt === 'story' ? 230 : 150);
+  if (mark && !plain) { const mi2 = await loadImg('data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(mark).replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" '))); if (mi2) x.drawImage(mi2, M, by - 62, 84, 84); }
+  x.font = F(800, 46); x.fillText('HitchCal', M + 108, by - 8);
+  x.globalAlpha = .8; x.font = F(600, 32); x.fillText((CONFIG.shareUrl || (location.protocol.startsWith('http') && !EMBEDDED ? location.host : 'The hitch calendar for rotation workers')).replace(/^https?:\/\//, '').replace(/\/$/, ''), M + 108, by + 34); x.globalAlpha = 1;
+  return c;
+}
+async function openShareCard() {
+  openSheet({ title: 'Share your countdown', left: 'Done', body: `<div class="seg" data-change="card-fmt" style="margin:0 0 12px">${[['post', 'Post'], ['story', 'Story']].map(([v, l]) => `<button type="button" data-act="seg" data-val="${v}" class="${cardFmt === v ? 'on' : ''}">${l}</button>`).join('')}</div>
+    <div class="card-prev"><img id="card-img" alt="Your countdown card"></div>
+    <button class="btn primary" data-act="card-share" style="margin-top:12px">${IC.share}Share image</button>
+    <p class="foot">${EMBEDDED ? 'Sharing is off in this preview. Press and hold the image to save it.' : 'Share to Facebook, Instagram, a text, or save it to your photos.'}</p>` });
+  await renderCard();
+}
+let cardBlob = null;
+async function renderCard() {
+  let c = await drawCard(cardFmt), url;
+  try { url = c.toDataURL('image/png'); } catch (e) { c = await drawCard(cardFmt, true); url = c.toDataURL('image/png'); } /* a blocked image: redraw without it */
+  const img = $('#card-img'); if (!img) return;
+  img.src = url;
+  cardBlob = await new Promise(r => c.toBlob(r, 'image/png'));
+}
+async function shareCard() {
+  if (!cardBlob) await renderCard();
+  const file = new File([cardBlob], 'hitchcal-countdown.png', { type: 'image/png' });
+  track('Shared countdown');
+  if (!EMBEDDED && navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file], text: 'Counting down with HitchCal' }); return; } catch (e) { if (e && e.name === 'AbortError') return; } }
+  if (EMBEDDED) return toast('Press and hold the image to save it');
+  const url = URL.createObjectURL(cardBlob), a2 = document.createElement('a'); a2.href = url; a2.download = 'hitchcal-countdown.png'; document.body.appendChild(a2); a2.click(); a2.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000); toast('Image saved');
+}
+
+/* ───────── hitch changes ───────── */
+const hcWords = (n, late, early) => !n ? 'On schedule' : n > 0 ? `${plural(n, 'day')} ${late}` : `${plural(-n, 'day')} ${early}`;
+function openHitchChange(key) {
+  const sch = me(), E = engine(sch), i = Math.round(daysBetween(parseKey(S.hitchStart), parseKey(key)) / E.C), h = E.H(i), a = S.adjust[key] || { s: 0, e: 0, push: false };
+  openSheet({
+    title: 'Change this hitch', left: 'Cancel', right: 'Save',
+    body: `<p class="foot" style="margin:2px 4px 12px">Scheduled ${fmtMD(h.sFirst)}–${fmtMD(h.sLast)} · ${plural(sch.pattern.daysOn, 'day')}</p>
+      <div class="group">
+        <div class="row"><span class="t"><b>Start</b><small id="hc-s-l"></small></span><span class="stepper"><button type="button" data-act="hc-step" data-f="s" data-d="-1" aria-label="Start a day earlier">−</button><button type="button" data-act="hc-step" data-f="s" data-d="1" aria-label="Start a day later">+</button></span></div>
+        <div class="row"><span class="t"><b>End</b><small id="hc-e-l"></small></span><span class="stepper"><button type="button" data-act="hc-step" data-f="e" data-d="-1" aria-label="End a day earlier">−</button><button type="button" data-act="hc-step" data-f="e" data-d="1" aria-label="End a day later">+</button></span></div>
+        <div class="row"><span class="t"><b>Move my rotation too</b><small>Later hitches shift by the same days</small></span><button type="button" class="switch${a.push ? ' on' : ''}" role="switch" aria-checked="${!!a.push}" aria-label="Move my rotation too" data-act="switch" data-change="hc-push" id="hc-push"></button></div>
+      </div>
+      <div class="hc-sum" id="hc-sum"></div>
+      <p class="foot">Use + on End when you're held over, and − when you're released early. Leave Move my rotation off if your next hitch still starts on its usual day.</p>
+      ${S.adjust[key] ? '<button class="btn del" data-act="hc-reset">Back to the regular schedule</button>' : ''}`,
+    onOpen(b) { b.dataset.k = key; b.dataset.s = a.s || 0; b.dataset.e = a.e || 0; hcRefresh(); },
+    onPrimary() {
+      const b = $('#sheet-body'), sv = +b.dataset.s, ev = +b.dataset.e, push = $('#hc-push').classList.contains('on');
+      if (!sv && !ev) delete S.adjust[key]; else S.adjust[key] = { s: sv, e: ev, push };
+      save(); closeSheet(); render(); toast(sv || ev ? 'Hitch changed' : 'Back on schedule');
+    }
+  });
+}
+function hcRefresh() {
+  const b = $('#sheet-body'), key = b.dataset.k, sv = +b.dataset.s, ev = +b.dataset.e, sch = me(), E = engine(sch);
+  const h = E.H(Math.round(daysBetween(parseKey(S.hitchStart), parseKey(key)) / E.C)), first = addDays(h.sFirst, sv), last = addDays(h.sLast, ev), days = Math.max(1, daysBetween(first, last) + 1);
+  $('#hc-s-l').textContent = hcWords(sv, 'late', 'early');
+  $('#hc-e-l').textContent = !ev ? 'On schedule' : ev > 0 ? `Held over ${plural(ev, 'day')}` : `Released ${plural(-ev, 'day')} early`;
+  $('#hc-sum').innerHTML = `<b>${fmtMD(first)}–${fmtMD(last)}</b><span>${plural(days, 'day')} on hitch${days !== sch.pattern.daysOn ? ` · ${days > sch.pattern.daysOn ? '+' : '−'}${Math.abs(days - sch.pattern.daysOn)} from usual` : ''}</span>`;
+}
+function openChanges() {
+  const adj = Object.entries(S.adjust).sort(([x], [y]) => x < y ? 1 : -1), dcs = Object.entries(S.dayChanges).sort(([x], [y]) => x < y ? 1 : -1), E = engine(me());
+  const hrows = adj.map(([k, v]) => { const h = E.H(Math.round(daysBetween(parseKey(S.hitchStart), parseKey(k)) / E.C)); const bits = [v.s ? hcWords(v.s, 'late', 'early').replace('day', 'day') + ' start' : '', v.e ? (v.e > 0 ? `held over ${plural(v.e, 'day')}` : `released ${plural(-v.e, 'day')} early`) : '', v.push ? 'rotation moved' : ''].filter(Boolean).join(' · ');
+    return `<button class="row" data-act="hc-open" data-k="${k}"><span class="itile" style="--c:var(--day)">${IC.cal}</span><span class="t"><b>${fmtMD(h.first)}–${fmtMD(h.last)} hitch</b><small>${bits}</small></span>${IC.chev}</button>`; }).join('');
+  const drows = dcs.map(([k, v]) => `<button class="row" data-act="day" data-k="${k}"><span class="itile" style="--c:${v.t === 'on' ? 'var(--day)' : 'var(--home)'}">${v.t === 'on' ? IC.sun : IC.house}</span><span class="t"><b>${fmtDay(parseKey(k))}</b><small>${v.t === 'on' ? 'Called in to work' : v.why === 'swap' ? 'Swapped with someone' : 'Sick or day off'}</small></span>${IC.chev}</button>`).join('');
+  openSheet({ title: 'Hitch changes', left: 'Done', body: adj.length || dcs.length
+    ? `${hrows ? `<div class="sec-h" style="padding-top:0">Hitches</div><div class="group ic">${hrows}</div>` : ''}${drows ? `<div class="sec-h">Days</div><div class="group ic">${drows}</div>` : ''}<p class="foot">Tap one to change or undo it.</p>`
+    : `<div class="empty-note"><b>No changes yet</b><p>When a hitch runs long, ends early, or you're sick or called in, tap that day on the calendar and change it. The countdown, pay and insights follow.</p></div>` });
+}
+
 /* ───────── Calendar ───────── */
 function renderCal(dir) {
   const sch = me(), info = nowInfo(sch), on = info.phase === 'on';
@@ -930,6 +1133,7 @@ function dayCell(d, month, i0) {
     }
     if (out) cls.push('out');
     if (k === tk) cls.push('now');
+    if (ci.moved && !out) cls.push('chg');
     const hol = S.showHolidays ? holidayOn(k) : null, note = S.notes[k], fam = familyOn(k);
     let bars = '';
     S.rosters.slice(0, 5).forEach((r, ri) => {
@@ -957,10 +1161,10 @@ function listHTML() {
   for (let i = 0; i < 90; i++) {
     const d = addDays(today, i), k = toKey(d), ci = cellInfo(k, sch), ev = [];
     const col = ci.shift === 'night' ? 'var(--night)' : 'var(--day)';
-    if (i === 0) ev.push(['var(--tint)', `Today · ${ci.type === 'on' ? `On hitch, day ${ci.pos + 1} of ${p.daysOn}` : `Days off, day ${ci.pos - p.daysOn + 1} of ${p.daysOff}`}`]);
-    if (ci.type === 'on' && ci.pos === 0) ev.push([col, `Hitch starts · ${shiftName(ci.shift)}, ${fmt12(ci.st)}`]);
-    if (ci.type === 'on' && ci.pos === p.daysOn - 1 && !ci.crosses) ev.push([col, `Last shift · off at ${fmt12(ci.et)}`]);
-    if (ci.type === 'off' && ci.pos === p.daysOn) ev.push(['var(--home)', ci.tail ? `Off at ${fmt12(ci.et)} · days off start` : 'Days off start']);
+    if (i === 0) ev.push(['var(--tint)', `Today · ${ci.type === 'on' ? `On hitch, day ${ci.n} of ${ci.len}` : `Days off, day ${ci.n} of ${ci.len}`}`]);
+    if (ci.type === 'on' && ci.first) ev.push([col, `Hitch starts · ${shiftName(ci.shift)}, ${fmt12(ci.st)}`]);
+    if (ci.type === 'on' && ci.last && !ci.crosses) ev.push([col, `Last shift · off at ${fmt12(ci.et)}`]);
+    if (ci.type === 'off' && ci.offStart && !ci.dc) ev.push(['var(--home)', ci.tail ? `Off at ${fmt12(ci.et)} · days off start` : 'Days off start']);
     const hol = holidayOn(k); if (hol) ev.push(['var(--tint)', `${hol} · ${ci.type === 'on' ? 'on hitch' : 'off'}`]);
     (familyOn(k) || []).forEach(f => ev.push(['var(--hol)', `${famEmoji(f.kind)} ${f.name} · ${ci.type === 'on' ? 'on hitch' : 'home'}`]));
     S.certs.forEach(c => { if (c.expiry === k) ev.push(['var(--danger)', `${c.name} expires`]); });
@@ -985,16 +1189,26 @@ function openDay(k) {
   let st;
   if (ci.type === 'on') {
     const bits = [`${shiftName(ci.shift)}, ${fmt12(ci.st)} to ${fmt12(ci.et)}`];
-    if (ci.pos === 0) bits.push(`hitch starts at ${fmt12(ci.st)}`);
-    if (ci.pos === p.daysOn - 1) bits.push(ci.crosses ? `last shift, off at ${fmt12(ci.et)} next morning` : `last shift, off at ${fmt12(ci.et)}`);
-    st = `<div class="dstat ${ci.shift === 'night' ? 'n' : 'd'}">${ci.shift === 'night' ? IC.moon : IC.sun}<div><b>On hitch · Day ${ci.pos + 1} of ${p.daysOn}</b><small>${bits.join(' · ')}</small></div></div>`;
+    if (ci.first) bits.push(`hitch starts at ${fmt12(ci.st)}`);
+    if (ci.last) bits.push(ci.crosses ? `last shift, off at ${fmt12(ci.et)} next morning` : `last shift, off at ${fmt12(ci.et)}`);
+    st = `<div class="dstat ${ci.shift === 'night' ? 'n' : 'd'}">${ci.shift === 'night' ? IC.moon : IC.sun}<div><b>${ci.dc ? 'Called in · extra day' : `On hitch · Day ${ci.n} of ${ci.len}`}</b><small>${bits.join(' · ')}</small></div></div>`;
   } else {
-    st = `<div class="dstat h">${IC.house}<div><b>Days off · Day ${ci.pos - p.daysOn + 1} of ${p.daysOff}</b><small>${ci.tail ? `Night shift ends at ${fmt12(ci.et)}, then you're off` : ci.pos === p.daysOn + p.daysOff - 1 ? 'Last day off before the next hitch' : 'Home'}</small></div></div>`;
+    st = `<div class="dstat h">${IC.house}<div><b>${ci.dc ? (ci.dc.why === 'swap' ? 'Off · swapped day' : 'Off · sick or day off') : `Days off · Day ${ci.n} of ${ci.len}`}</b><small>${ci.tail ? `Night shift ends at ${fmt12(ci.et)}, then you're off` : ci.dc ? 'Taken off from this hitch' : ci.finalOff ? 'Last day off before the next hitch' : 'Home'}</small></div></div>`;
   }
   const rows = [];
   (familyOn(k) || []).forEach(f => rows.push(`<button class="row" data-act="fam-edit" data-id="${f.id}"><span class="itile e">${famEmoji(f.kind)}</span><span class="t"><b>${esc(f.name)}</b><small>${esc(FAM_KINDS.find(([x]) => x === f.kind)[1])}${f.yearly ? ' · every year' : ''}</small></span>${IC.chev}</button>`));
   const hol = holidayOn(k); if (hol) rows.push(`<div class="row"><span class="itile" style="--c:var(--hol);color:var(--hol-ink)">${holIcon(hol)}</span><span class="t"><b>${esc(hol)}</b><small>Federal holiday</small></span></div>`);
   S.certs.filter(c => c.expiry === k).forEach(c => rows.push(`<div class="row"><span class="itile" style="--c:var(--danger)">${IC.shield}</span><span class="t"><b>${esc(c.name)}</b><small>Expires this day</small></span></div>`));
+  const E = engine(sch), ar = E.around(d), bt = baseType(k, sch), dc = S.dayChanges[k];
+  const hitchRow = (h, label) => h ? `<button class="row" data-act="hc-open" data-k="${h.key}"><span class="itile" style="--c:var(--day)">${IC.cal}</span><span class="t"><b>${label}</b><small>${fmtMD(h.first)}–${fmtMD(h.last)} · ${plural(h.days, 'day')}${h.changed ? ' · changed' : ''}</small></span>${IC.chev}</button>` : '';
+  const change = `<div class="sec-h">Change this day</div><div class="group ic">${dc
+    ? `<div class="row"><span class="itile" style="--c:var(--hol);color:var(--hol-ink)">${IC.wrench}</span><span class="t"><b>${dc.t === 'on' ? 'Called in to work' : dc.why === 'swap' ? 'Swapped with someone' : 'Sick or took the day off'}</b><small>Changed from your schedule</small></span><button type="button" class="txt-btn" data-act="dc-undo">Undo</button></div>`
+    : bt === 'on'
+      ? `<button class="row" data-act="dc-set" data-t="off" data-why="sick"><span class="itile" style="--c:var(--home)">${IC.house}</span><span class="t"><b>Sick or took the day off</b><small>Not worked, not paid</small></span>${IC.chev}</button>
+         <button class="row" data-act="dc-set" data-t="off" data-why="swap"><span class="itile" style="--c:var(--home)">${IC.house}</span><span class="t"><b>Swapped with someone</b><small>Someone else covered this day</small></span>${IC.chev}</button>`
+      : `<button class="row" data-act="dc-set" data-t="on" data-why="called"><span class="itile" style="--c:var(--day)">${IC.sun}</span><span class="t"><b>Called in to work</b><small>An extra paid day</small></span>${IC.chev}</button>`}
+    ${ar.cur ? hitchRow(ar.cur, 'Change this hitch') : hitchRow(ar.prev, 'Change the last hitch') + hitchRow(ar.next, 'Change the next hitch')}</div>
+    <p class="foot">Held over, released early, or started late? Change the hitch and the countdown and pay follow.</p>`;
   const crew = S.rosters.map(r => { const on = dayType(k, r) === 'on'; return `<div class="row"><span class="avatar sm" style="--av:${r.color};--avi:${inkFor(r.color)}">${avInner(r)}</span><span class="t"><b>${esc(r.name)}</b></span><span class="chip ${on ? 'c-gray' : 'c-home'}">${on ? 'On hitch' : 'Home'}</span></div>`; }).join('');
   openSheet({
     title: `${fmtLong(d)}${d.getFullYear() !== new Date().getFullYear() ? ', ' + d.getFullYear() : ''}`, right: 'Save',
@@ -1003,7 +1217,8 @@ function openDay(k) {
       <div class="sec-h">Note</div>
       <div class="group form"><div class="emojis" id="ds-emojis">${EMOJI.map(e => `<button type="button" class="emo${note.emoji === e ? ' on' : ''}" data-act="emoji" data-e="${e}">${e}</button>`).join('')}</div>
       <textarea id="ds-note" rows="3" maxlength="240" placeholder="Birthday, appointment, crew change…">${esc(note.text)}</textarea></div>
-      ${S.notes[k] ? '<button class="btn del" data-act="note-del">Delete note</button>' : ''}`,
+      ${S.notes[k] ? '<button class="btn del" data-act="note-del">Delete note</button>' : ''}
+      ${change}`,
     onPrimary() {
       const text = $('#ds-note').value.trim(), em = $('#ds-emojis .emo.on');
       if (text || em) S.notes[k] = { text, emoji: em ? em.dataset.e : '' }; else delete S.notes[k];
@@ -1016,12 +1231,12 @@ function openDay(k) {
 /* ───────── Pay ───────── */
 function renderPay() {
   const sch = me(), p = S.pattern, e = S.earnings, info = nowInfo(sch), on = info.phase === 'on', yr = new Date().getFullYear();
-  const hk = toKey(on ? info.cs : info.until), full = fullPay(hk, p.daysOn), worked = on ? info.dayNum : 0, got = earnedPay(hk, worked, p.daysOn), show = on ? got : full, days = on ? worked : p.daysOn, tN = num(e.travelDays);
+  const hk = info.hk, hd = info.work, full = fullPay(hk, hd), worked = on ? info.worked : 0, got = earnedPay(hk, worked, hd), show = on ? got : full, days = on ? worked : hd, tN = num(e.travelDays);
   const yp = yearPay(yr), rate = e.payType === 'hourly' ? `${money(num(e.hourlyRate), 2)}/hr × ${num(e.hoursPerShift)} hrs` : `${money(num(e.dayRate))}/day`;
   let h = `<div class="eyebrow">${on ? `Day ${info.dayNum} of ${info.total}` : `Next hitch starts ${fmtMD(info.until)}`}</div><h1 class="lt">Pay</h1>
   ${hasRates() ? '' : `<button class="banner" data-act="pay-edit"><span>Your pay rates aren't set yet, so everything shows ${money(0)}.</span><b>Add rates</b>${IC.chev}</button>`}
   <div class="pcard"><div class="eyebrow">${on ? 'Earned this hitch' : 'Next hitch estimate'}</div><div class="big">${money(show.total)}</div>
-    ${on ? `<div class="track"><i style="width:${Math.round(clamp(got.total / (full.total || 1)) * 100)}%"></i></div><div class="cap"><span>${plural(worked, 'day')} worked</span><span>${money(full.total)} at hitch end</span></div>` : `<div class="cap" style="margin-top:6px"><span>${plural(p.daysOn, 'day')} · ${esc(rate)}</span></div>`}
+    ${on ? `<div class="track"><i style="width:${Math.round(clamp(got.total / (full.total || 1)) * 100)}%"></i></div><div class="cap"><span>${plural(worked, 'day')} worked</span><span>${money(full.total)} at hitch end</span></div>` : `<div class="cap" style="margin-top:6px"><span>${plural(hd, 'day')} · ${esc(rate)}</span></div>`}
   </div>
   <div class="group" style="margin-top:10px">
     <div class="row"><span class="k">Base pay <span class="mut">· ${plural(days, 'day')} × ${money(dailyPay())}</span></span><span class="v">${money(show.base)}</span></div>
@@ -1265,7 +1480,7 @@ async function shareFamily() {
 }
 
 /* ───────── Settings + Certifications ───────── */
-const FAQ = [["Where is my information kept?", "On this phone only, in your browser's storage. There's no account and nothing is uploaded. Use Back up in Settings to save a copy."], ["How do I move HitchCal to a new phone?", "On the old phone, tap Back up in Settings and send the file to yourself. On the new phone, open HitchCal and tap Restore from a backup."], ["How do I put HitchCal on my home screen?", "iPhone: open it in Safari, tap Share, then Add to Home Screen. Android: open it in Chrome, tap the menu, then Install app."], ["Does it work without signal?", "Yes. After you open it once with signal, the calendar, countdown and pay work offline."], ["How is my pay worked out?", "Your day rate (or hourly rate times hours) for each day worked, plus per diem, mileage for the trip and any paid travel days. It's an estimate of gross pay before taxes."], ["What happens with night shifts that cross midnight?", "The calendar splits those days, so you can see where one shift ends and days off begin."], ["How do I share my schedule with family?", "Use Share with family. It sends a link that opens a read-only calendar of your hitches and days off. The schedule travels inside the link; nothing is stored online."], ["Can I follow a crew member's schedule?", "Yes. Add their schedule on the Crew tab, or open a crew link they send you. Their hitches show as a colored line on your calendar."]];
+const FAQ = [["My hitch got extended or cut short. How do I fix it?", "Tap any day of that hitch on the calendar, then Change this hitch. Use + on End when you're held over and − when you're released early. Turn on Move my rotation if the rest of your schedule shifts too. For a sick day or a call-in, tap that day and mark it. Changed days get a small dot on the calendar."], ["Where is my information kept?", "On this phone only, in your browser's storage. There's no account and nothing is uploaded. Use Back up in Settings to save a copy."], ["How do I move HitchCal to a new phone?", "On the old phone, tap Back up in Settings and send the file to yourself. On the new phone, open HitchCal and tap Restore from a backup."], ["How do I put HitchCal on my home screen?", "iPhone: open it in Safari, tap Share, then Add to Home Screen. Android: open it in Chrome, tap the menu, then Install app."], ["Does it work without signal?", "Yes. After you open it once with signal, the calendar, countdown and pay work offline."], ["How is my pay worked out?", "Your day rate (or hourly rate times hours) for each day worked, plus per diem, mileage for the trip and any paid travel days. It's an estimate of gross pay before taxes."], ["What happens with night shifts that cross midnight?", "The calendar splits those days, so you can see where one shift ends and days off begin."], ["How do I share my schedule with family?", "Use Share with family. It sends a link that opens a read-only calendar of your hitches and days off. The schedule travels inside the link; nothing is stored online."], ["Can I follow a crew member's schedule?", "Yes. Add their schedule on the Crew tab, or open a crew link they send you. Their hitches show as a colored line on your calendar."]];
 /*__LEGAL__*/
 const openCurrency = () => openSheet({ title: 'Currency', left: 'Done', body: `<div class="group">${CURRENCIES.map(([c, n]) => `<button class="row" data-act="currency-pick" data-c="${c}"><span class="t"><b>${n}</b><small>${c} · ${symFor(c)}</small></span>${S.currency === c ? '<span class="tick">✓</span>' : ''}</button>`).join('')}</div><p class="foot">Changes how amounts are shown. It doesn't convert your rates.</p>` });
 const openWhatsNew = () => openSheet({ title: "What's new", left: 'Done', body: `<p class="wn-v">Version ${APP_VERSION}</p><div class="wn">${WHATS_NEW.map(([t, d]) => `<div class="wn-i"><span class="wn-ic">${IC.sparkle}</span><div><b>${esc(t)}</b><p>${esc(d)}</p></div></div>`).join('')}</div>` });
@@ -1351,7 +1566,8 @@ function renderMore() {
   const p = S.pattern, exp = S.certs.filter(c => certState(c).n <= 30).length;
   $('#more-body').innerHTML = `<h1 class="lt">Settings</h1>
   <div class="group"><button class="row" data-act="edit-hitch" style="padding-block:12px"><span class="avatar lg">${avInner(S)}</span><span class="t"><b style="font-size:calc(20px*var(--ts));font-weight:700">${esc(S.name || 'My hitch')}</b><small>${patText(p)} · ${p.alternating ? 'Days and nights' : shiftName(p.shiftType)} · ${fmt12(p.startTime)} to ${fmt12(p.endTime)}</small></span>${IC.chev}</button></div>
-  <div class="group ic" style="margin-top:20px"><button class="row" data-act="certs-open"><span class="itile" style="--c:var(--home)">${IC.shield}</span><span class="t"><b>Certifications</b></span>${exp ? `<span class="chip c-warn">${exp} need${exp === 1 ? 's' : ''} attention</span>` : `<span class="v">${S.certs.length || 'None'}</span>`}${IC.chev}</button></div>
+  <div class="group ic" style="margin-top:20px"><button class="row" data-act="changes-open"><span class="itile" style="--c:var(--day)">${IC.cal}</span><span class="t"><b>Hitch changes</b><small>Held over, released early, sick days</small></span><span class="v">${Object.keys(S.adjust).length + Object.keys(S.dayChanges).length || 'None'}</span>${IC.chev}</button>
+    <button class="row" data-act="certs-open"><span class="itile" style="--c:var(--home)">${IC.shield}</span><span class="t"><b>Certifications</b></span>${exp ? `<span class="chip c-warn">${exp} need${exp === 1 ? 's' : ''} attention</span>` : `<span class="v">${S.certs.length || 'None'}</span>`}${IC.chev}</button></div>
   <div class="sec-h">Appearance</div>
   <div class="group ic"><div class="row"><span class="itile" style="--c:var(--night)">${IC.paint}</span><span class="t"><b>Theme</b></span><span class="seg sm" data-change="theme">${['system', 'light', 'dark'].map(t => `<button data-act="seg" data-val="${t}" class="${S.theme === t ? 'on' : ''}">${t === 'system' ? 'Auto' : t[0].toUpperCase() + t.slice(1)}</button>`).join('')}</span></div>
     <button class="row" data-act="colors-open"><span class="itile" style="--c:var(--tint);color:var(--on-tint)">${IC.star}</span><span class="t"><b>Colors and themes</b></span><span class="cdots">${COLOR_ROWS.map(([k]) => `<i style="background:${colorOf(k)}"></i>`).join('')}</span>${IC.chev}</button>
@@ -1366,7 +1582,7 @@ function renderMore() {
     <button class="row" data-act="currency-open"><span class="itile" style="--c:var(--day)">${IC.coin}</span><span class="t"><b>Currency</b></span><span class="v">${esc(S.currency)}</span>${IC.chev}</button></div>
   <div class="sec-h">Your data</div>
   <div class="group ic"><button class="row" data-act="pdf-open"><span class="itile" style="--c:var(--danger)">${IC.cal}</span><span class="t"><b>Year calendar PDF</b><small>One page with your year and holidays, for family</small></span>${IC.chev}</button>
-    <button class="row" data-act="export-ics"><span class="itile" style="--c:var(--day)">${IC.cal}</span><span class="t"><b>Export to a calendar app</b><small>A year of hitches as an .ics file</small></span>${IC.chev}</button>
+    <button class="row" data-act="export-ics"><span class="itile" style="--c:var(--day)">${IC.cal}</span><span class="t"><b>Export to a calendar app</b><small>A year of hitches, with alerts</small></span>${IC.chev}</button>
     <button class="row" data-act="backup"><span class="itile" style="--c:var(--day)">${IC.down}</span><span class="t"><b>Back up</b><small>Save everything to a file</small></span>${IC.chev}</button>
     <button class="row" data-act="restore"><span class="itile" style="--c:var(--day)">${IC.up}</span><span class="t"><b>Restore from a backup</b></span>${IC.chev}</button></div>
   <p class="foot">Everything is stored on this device. Nothing is uploaded.</p>
@@ -1374,6 +1590,7 @@ function renderMore() {
   <div class="group ic"><button class="row" data-act="whats-new"><span class="itile" style="--c:var(--hol);color:var(--hol-ink)">${IC.sparkle}</span><span class="t"><b>What's new</b></span><span class="v">${APP_VERSION}</span>${IC.chev}</button>
     <button class="row" data-act="faq-open"><span class="itile" style="--c:var(--home)">${IC.help}</span><span class="t"><b>Help and FAQ</b></span>${IC.chev}</button>
     <button class="row" data-act="feedback-open"><span class="itile" style="--c:var(--home)">${IC.mail}</span><span class="t"><b>Send feedback</b><small>Ideas, questions or something broken</small></span>${IC.chev}</button>
+    ${isInstalled() ? '' : `<button class="row" data-act="install-open"><span class="itile" style="--c:var(--day)">${IC.phone}</span><span class="t"><b>Add to Home Screen</b><small>Use HitchCal like an app</small></span>${IC.chev}</button>`}
     <button class="row" data-act="share-app"><span class="itile" style="--c:var(--home)">${IC.share}</span><span class="t"><b>Share HitchCal</b><small>Send it to your crew</small></span>${IC.chev}</button>
     <button class="row" data-act="legal" data-doc="privacy"><span class="itile" style="--c:#6C7077">${IC.lock}</span><span class="t"><b>Privacy policy</b></span>${IC.chev}</button>
     <button class="row" data-act="legal" data-doc="terms"><span class="itile" style="--c:#6C7077">${IC.doc}</span><span class="t"><b>Terms of use</b></span>${IC.chev}</button>
@@ -1525,6 +1742,22 @@ const A = {
   'page-back': () => { $('#page-certs').classList.remove('open'); render(); },
   'cert-add': () => openCert(null),
   'fam-add': () => openFamily(null),
+  'hc-open': el => openHitchChange(el.dataset.k),
+  'install-open': () => openInstall(),
+  'install-dismiss': () => { S.installDone = true; save(); render(); toast('You can find this in Settings any time'); },
+  'install-pf': v => { const st = $('#inst-steps'); if (st) st.innerHTML = installSteps(v); },
+  'install-prompt': async () => { if (!installPrompt) return; installPrompt.prompt(); try { const r = await installPrompt.userChoice; if (r && r.outcome === 'accepted') { S.installDone = true; save(); closeSheet(); render(); } } catch (e) { /* dismissed */ } installPrompt = null; },
+  'share-card': () => openShareCard(),
+  'card-fmt': v => { cardFmt = v; cardBlob = null; renderCard(); },
+  'card-share': () => shareCard(),
+  'hc-step': el => { const b = $('#sheet-body'), f = el.dataset.f, lim = f === 's' ? 14 : 30, v = clamp(+b.dataset[f] + +el.dataset.d, -lim, lim);
+    const days = S.pattern.daysOn - (f === 's' ? v : +b.dataset.s) + (f === 'e' ? v : +b.dataset.e); if (days < 1) return toast('A hitch needs at least one day');
+    b.dataset[f] = v; hcRefresh(); },
+  'hc-push': () => {},
+  'hc-reset': () => { const k = $('#sheet-body').dataset.k; delete S.adjust[k]; save(); closeSheet(); render(); toast('Back on schedule'); },
+  'changes-open': () => openChanges(),
+  'dc-set': el => { const k = $('#sheet-body').dataset.k; S.dayChanges[k] = { t: el.dataset.t, why: el.dataset.why }; save(); closeSheet(); render(); toast(el.dataset.t === 'on' ? 'Marked as called in' : 'Marked as a day off'); },
+  'dc-undo': () => { const k = $('#sheet-body').dataset.k; delete S.dayChanges[k]; save(); closeSheet(); render(); toast('Day back on schedule'); },
   'fam-edit': el => openFamily(el.dataset.id),
   'fam-kind': v => { if (v === 'event') { const sw = $('#fa-yearly'); if (sw && sw.classList.contains('on') && !$('#sheet-body').dataset.id) { sw.classList.remove('on'); sw.setAttribute('aria-checked', 'false'); } } },
   'fam-yearly': () => {},
@@ -1570,7 +1803,9 @@ const A = {
   'fam-next': () => { const d = new Date(famCal.y, famCal.m + 1, 1); famCal.y = d.getFullYear(); famCal.m = d.getMonth(); renderFamily(); },
   'pdf-open': () => openPdfSheet(),
   'pdf-make': () => exportPdf(),
-  'export-ics': () => deliverFile('hitchcal.ics', 'text/calendar', buildICS()),
+  'export-ics': () => openExport(),
+  'ics-go': () => { closeSheet(); deliverFile('hitchcal.ics', 'text/calendar', buildICS()); },
+  'ics-rem': (on, el) => { S.icsRem = { ...S.icsRem, [el.dataset.k]: on }; save(); },
   backup: () => deliverFile(`hitchcal-backup-${todayKey()}.json`, 'application/json', JSON.stringify(S, null, 2)),
   restore: () => $('#restore-file').click(),
   reset: () => ask({ title: 'Erase all HitchCal data?', msg: 'Your schedule, pay rates, notes, certifications and followed schedules are removed from this device. This cannot be undone.', ok: 'Erase everything', red: true, onOk() { const keep = S.theme; S = DEF(); S.theme = keep; save(); applyColors(); try { localStorage.removeItem('hitchcal_v1'); } catch (e) { /* ignore */ } startOnboarding(); } }),

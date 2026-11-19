@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>HitchCal: the hitch calendar for rotation workers</title>
+<meta name="description" content="A live countdown to days off, hitch pay, crew schedules and family dates. Built for oilfield rotation workers. Free, private, works offline.">
+<meta name="theme-color" content="#1E1F23">
+<meta property="og:title" content="HitchCal: know exactly when you're home">
+<meta property="og:description" content="The hitch calendar built for oilfield rotation workers: countdown to days off, hitch pay, crew and family dates.">
+<meta property="og:image" content="landing/shot-insights.webp">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<style>
+:root{
+  color-scheme:dark;
+  --bg:#141518;--bg2:#1E1F23;--card:#232428;--line:#2F3036;--fg:#F2F3F5;--muted:#A3A7AE;--dim:#7C8088;
+  --steel:#5287B8;--steel-2:#7FAAD0;--brass:#C2A06A;--sage:#5E9470;--btn:#E9EBEE;--btn-ink:#16171A;
+  --r:20px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.55 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+img{max-width:100%;display:block}
+.wrap{max-width:1120px;margin:0 auto;padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px))}
+/* nav */
+.nav{position:sticky;top:0;z-index:10;background:rgba(20,21,24,.82);backdrop-filter:saturate(1.4) blur(14px);-webkit-backdrop-filter:saturate(1.4) blur(14px);border-bottom:1px solid rgba(255,255,255,.06);padding-top:env(safe-area-inset-top,0px)}
+.nav .wrap{display:flex;align-items:center;gap:12px;height:64px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:19px;text-decoration:none;letter-spacing:-.01em}
+.brand img{width:34px;height:34px;border-radius:9px}
+.nav .sp{flex:1}
+.nav a.link{color:var(--muted);text-decoration:none;font-weight:500;font-size:15px}
+.nav a.link:hover{color:var(--fg)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:999px;padding:12px 22px;font-weight:700;font-size:16px;text-decoration:none;background:var(--btn);color:var(--btn-ink);transition:transform .15s}
+.btn:hover{transform:translateY(-1px)}
+.btn.sm{padding:9px 16px;font-size:15px}
+.btn.ghost{background:transparent;color:var(--fg);box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.22)}
+@media (max-width:560px){.nav a.link{display:none}}
+/* hero */
+.hero{padding:72px 0 40px;position:relative;overflow:hidden}
+.hero::before{content:"";position:absolute;inset:-20% -10% auto auto;width:720px;height:720px;background:radial-gradient(closest-side,rgba(82,135,184,.28),rgba(82,135,184,0));pointer-events:none}
+.hero .wrap{display:grid;grid-template-columns:1.05fr .95fr;gap:48px;align-items:center;position:relative}
+.eyebrow{display:inline-block;font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--brass);margin-bottom:16px}
+h1{font-size:clamp(40px,6.4vw,68px);line-height:1.02;letter-spacing:-.035em;margin:0 0 20px;text-wrap:balance;font-weight:800}
+h1 em{font-style:normal;color:var(--steel-2)}
+.lede{font-size:clamp(18px,2.2vw,21px);color:var(--muted);max-width:34em;margin:0 0 28px}
+.ctas{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.trust{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:26px;color:var(--dim);font-size:14px;font-weight:500}
+.trust span{display:inline-flex;align-items:center;gap:7px}
+.trust i{width:7px;height:7px;border-radius:50%;background:var(--sage)}
+.phone{width:min(330px,78vw);margin:0 auto;border-radius:46px;padding:10px;background:linear-gradient(160deg,#3A3C42,#18191C);box-shadow:0 40px 90px rgba(0,0,0,.55),inset 0 0 0 1px rgba(255,255,255,.08)}
+.phone img{border-radius:37px;width:100%;height:auto}
+@media (max-width:860px){.hero{padding-top:44px}.hero .wrap{grid-template-columns:1fr;gap:40px}.hero .copy{text-align:left}}
+/* sections */
+section{padding:72px 0}
+.sec-k{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--brass);margin:0 0 10px}
+h2{font-size:clamp(30px,4.2vw,44px);line-height:1.08;letter-spacing:-.03em;margin:0 0 14px;text-wrap:balance}
+.sec-lede{color:var(--muted);font-size:19px;max-width:40em;margin:0 0 36px}
+.feats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.feat{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:24px;min-width:0}
+.feat .ic{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;margin-bottom:16px;background:rgba(82,135,184,.18);color:var(--steel-2)}
+.feat .ic.b{background:rgba(194,160,106,.18);color:var(--brass)}
+.feat .ic.g{background:rgba(94,148,112,.2);color:#86BC97}
+.feat .ic svg{width:24px;height:24px}
+.feat h3{font-size:19px;margin:0 0 6px;letter-spacing:-.01em}
+.feat p{margin:0;color:var(--muted);font-size:16px}
+@media (max-width:900px){.feats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:600px){.feats{grid-template-columns:1fr}}
+.shots{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px}
+.shot{margin:0}
+.shot img{border-radius:28px;box-shadow:0 20px 50px rgba(0,0,0,.45),0 0 0 1px rgba(255,255,255,.07);width:100%;height:auto}
+.shot figcaption{color:var(--muted);font-size:15px;margin-top:12px;text-align:center}
+@media (max-width:900px){.shots{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:min(240px,64vw);overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:12px;margin-right:calc(-1 * max(20px,env(safe-area-inset-right,0px)))}.shot{scroll-snap-align:start}}
+.band{background:var(--bg2);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.install{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.how{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:24px;min-width:0}
+.how h3{margin:0 0 14px;font-size:20px;display:flex;align-items:center;gap:10px}
+.how ol{margin:0;padding:0;list-style:none;display:grid;gap:12px;counter-reset:s}
+.how li{display:flex;gap:12px;align-items:flex-start;color:var(--muted);counter-increment:s}
+.how li::before{content:counter(s);flex:0 0 28px;height:28px;border-radius:50%;display:grid;place-items:center;background:var(--btn);color:var(--btn-ink);font-weight:800;font-size:14px}
+.how li b{color:var(--fg)}
+@media (max-width:760px){.install{grid-template-columns:1fr}}
+.faq details,.faq .sec-k,.faq h2{max-width:780px}
+details{border-bottom:1px solid var(--line);padding:4px 0}
+summary{cursor:pointer;list-style:none;padding:16px 36px 16px 0;font-weight:600;font-size:18px;position:relative}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";position:absolute;right:4px;top:12px;font-size:26px;font-weight:400;color:var(--dim)}
+details[open] summary::after{content:"–"}
+details p{margin:0 0 18px;color:var(--muted)}
+.final{text-align:center;padding:96px 0}
+.final h2{max-width:16em;margin-left:auto;margin-right:auto}
+.final .sec-lede{margin-left:auto;margin-right:auto}
+.final .ctas{justify-content:center}
+footer{border-top:1px solid var(--line);padding:32px 0 calc(32px + env(safe-area-inset-bottom,0px));color:var(--dim);font-size:14px}
+footer .wrap{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center}
+footer .sp{flex:1}
+footer a{color:var(--muted);text-decoration:none}
+footer a:hover{color:var(--fg)}
+</style>
+</head>
+<body>
+<header class="nav"><div class="wrap">
+  <a class="brand" href="#top"><img src="favicon.svg" alt="">HitchCal</a>
+  <span class="sp"></span>
+  <a class="link" href="#features">Features</a>
+  <a class="link" href="#install">Install</a>
+  <a class="btn sm" href="./">Open the app</a>
+</div></header>
+
+<main id="top">
+  <div class="hero"><div class="wrap">
+    <div class="copy">
+      <span class="eyebrow">For oilfield rotation workers</span>
+      <h1>Know exactly when you're <em>home.</em></h1>
+      <p class="lede">The hitch calendar built for the patch: a live countdown to days off, what this hitch pays, your crew's schedules, and every birthday you'll be home for.</p>
+      <div class="ctas"><a class="btn" href="./">Open HitchCal free</a><a class="btn ghost" href="#install">Add it to your phone</a></div>
+      <div class="trust"><span><i></i>No account</span><span><i></i>Works without signal</span><span><i></i>Your data stays on your phone</span></div>
+    </div>
+    <div class="phone"><img src="landing/shot-insights.webp" alt="HitchCal showing a countdown: headed home in 5 days, with coming up events and a year at a glance" width="390" height="844"></div>
+  </div></div>
+
+  <section id="features"><div class="wrap">
+    <p class="sec-k">Built for the rotation</p>
+    <h2>Everything a hand checks on hitch, in one place.</h2>
+    <p class="sec-lede">14 and 14, 21 and 7, days and nights: set your rotation once and HitchCal lays out the whole year.</p>
+    <div class="feats">
+      <div class="feat"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 1.5M9 2.5h6"/></svg></div><h3>Countdown to home</h3><p>Days, hours and minutes until crew change, and a card to share it with the family.</p></div>
+      <div class="feat"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg></div><h3>Held over? Released early?</h3><p>Change a hitch in two taps. The calendar, countdown and pay all follow.</p></div>
+      <div class="feat"><div class="ic g"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M14.5 9.2c-.5-.9-1.5-1.4-2.6-1.4-1.6 0-2.7.9-2.7 2.1 0 2.9 5.5 1.6 5.5 4.3 0 1.3-1.2 2.2-2.8 2.2-1.2 0-2.3-.6-2.8-1.6M12 6v1.8M12 16.4V18"/></svg></div><h3>Hitch pay</h3><p>Day rate or hourly with overtime, per diem, mileage and travel days, tallied as you go.</p></div>
+      <div class="feat"><div class="ic b"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21v-1a7 7 0 0 1 14 0v1"/><circle cx="12" cy="8" r="4"/></svg></div><h3>Family dates</h3><p>Add birthdays and anniversaries and see months ahead which ones you'll be home for.</p></div>
+      <div class="feat"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20v-.5A6.5 6.5 0 0 1 9 13a6.5 6.5 0 0 1 6.5 6.5v.5M16 4.5a3.5 3.5 0 0 1 0 7M18 13.5a6.5 6.5 0 0 1 3.5 6v.5"/></svg></div><h3>Crew and family</h3><p>Follow your crew's rotations, see days off together, and send home a read-only calendar link.</p></div>
+      <div class="feat"><div class="ic b"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg></div><h3>Reminders that work</h3><p>Export your year to your phone's calendar with alerts for crew change and expiring certs.</p></div>
+    </div>
+  </div></section>
+
+  <section class="band"><div class="wrap">
+    <p class="sec-k">See it</p>
+    <h2>Made to read at a glance.</h2>
+    <p class="sec-lede">Day shifts, night shifts and days off in clear colors, holidays marked, and your crew on the same calendar.</p>
+    <div class="shots">
+      <figure class="shot"><img src="landing/shot-insights.webp" alt="Insights screen with countdown" loading="lazy" width="390" height="844"><figcaption>Countdown and what's coming</figcaption></figure>
+      <figure class="shot"><img src="landing/shot-calendar.webp" alt="Month calendar with hitches, holidays and a crew member's schedule" loading="lazy" width="390" height="844"><figcaption>Your whole rotation</figcaption></figure>
+      <figure class="shot"><img src="landing/shot-pay.webp" alt="Pay screen showing earnings this hitch and this year" loading="lazy" width="390" height="844"><figcaption>What this hitch pays</figcaption></figure>
+      <figure class="shot"><img src="landing/shot-change.webp" alt="Changing a hitch: held over 3 days" loading="lazy" width="390" height="844"><figcaption>Held over? Two taps.</figcaption></figure>
+    </div>
+  </div></section>
+
+  <section id="install"><div class="wrap">
+    <p class="sec-k">No app store needed</p>
+    <h2>On your home screen in ten seconds.</h2>
+    <p class="sec-lede">HitchCal is a web app. Add it once and it opens full screen like any other app, even without signal.</p>
+    <div class="install">
+      <div class="how"><h3>iPhone</h3><ol><li><span>Open HitchCal in <b>Safari</b>.</span></li><li><span>Tap the <b>Share</b> button at the bottom.</span></li><li><span>Tap <b>Add to Home Screen</b>, then <b>Add</b>.</span></li></ol></div>
+      <div class="how"><h3>Android</h3><ol><li><span>Open HitchCal in <b>Chrome</b>.</span></li><li><span>Tap the <b>⋮</b> menu at the top right.</span></li><li><span>Tap <b>Install app</b> or <b>Add to Home screen</b>.</span></li></ol></div>
+    </div>
+  </div></section>
+
+  <section class="band"><div class="wrap faq">
+    <p class="sec-k">Questions</p>
+    <h2>Straight answers.</h2>
+    <details><summary>Is it free?</summary><p>Yes. Everything you see here is free to use.</p></details>
+    <details><summary>Where is my information kept?</summary><p>On your phone only. There's no account and nothing is uploaded. You can back it up to a file any time.</p></details>
+    <details><summary>Does it work for my rotation?</summary><p>Any even or uneven rotation works: 14/14, 21/7, 28/28, 7/7 days and nights, and more. Set your start date and shift times once.</p></details>
+    <details><summary>What if my hitch changes?</summary><p>Tap the day, then change the hitch: held over, released early, started late, sick days and call-ins. Everything recalculates.</p></details>
+  </div></section>
+
+  <section class="final"><div class="wrap">
+    <h2>Stop counting days on your fingers.</h2>
+    <p class="sec-lede">Set your rotation once. HitchCal handles the rest.</p>
+    <div class="ctas"><a class="btn" href="./">Open HitchCal free</a></div>
+  </div></section>
+</main>
+
+<footer><div class="wrap">
+  <span>© 2026 HitchCal · Built by an oilfield hand</span>
+  <span class="sp"></span>
+  <a href="privacy.html">Privacy</a>
+  <a href="terms.html">Terms</a>
+  <a href="./">Open the app</a>
+</div></footer>
+</body>
+</html>

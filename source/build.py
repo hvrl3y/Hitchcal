@@ -87,7 +87,7 @@ img{{max-width:100%}}
     }, indent=2))
 
     (DIST / 'sw.js').write_text('''// HitchCal offline support: try the network first so updates land, fall back to the saved copy on a bad signal.
-const CACHE = 'hitchcal-v12';
+const CACHE = 'hitchcal-v13';
 const SHELL = ['./', 'manifest.webmanifest', 'icon-192.png', 'favicon.svg'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL))); self.skipWaiting(); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k))))); self.clients.claim(); });
@@ -127,6 +127,10 @@ self.addEventListener('fetch', e => {
     (DIST / 'robots.txt').write_text('User-agent: *\nAllow: /\n')
     (DIST / 'jspdf.umd.min.js').write_bytes((ROOT / 'vendor' / 'jspdf.umd.min.js').read_bytes())  # jsPDF 2.5.1, MIT licence
     (DIST / '.nojekyll').write_text('')
+    # landing page for the .com, with its screenshots (made by tools/render_shots.py)
+    shutil.copyfile(SRC / 'landing.html', DIST / 'landing.html')
+    (DIST / 'landing').mkdir(exist_ok=True)
+    for f in (SRC / 'landing').glob('*.webp'): shutil.copyfile(f, DIST / 'landing' / f.name)
     for slug, title in (('privacy', 'Privacy policy'), ('terms', 'Terms of use')):
         (DIST / f'{slug}.html').write_text(f'''<!doctype html>
 <html lang="en">
