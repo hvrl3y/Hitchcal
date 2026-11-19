@@ -117,7 +117,6 @@ const IC = {
 /* ───────── profile icons (shipped with the app, so they cost nothing to serve) ───────── */
 /*__AVATARS__*/
 const AV = {
-  point: ["Tool pusher"],
   shades: ["Cool hand"],
   wave: ["Hold up"],
   driller: ["Driller"],
@@ -128,7 +127,6 @@ const AV = {
   oldhand: ["Old hand"],
   brow: ["Skeptic"],
   scratch: ["Head scratcher"],
-  tired: ["Day 13"],
   stern: ["No nonsense"],
   sleepy: ["Night shift"],
   sour: ["Sour"],
@@ -142,7 +140,6 @@ const AV = {
   fuse: ["Short fuse"],
   meh: ["Meh"],
   holdin: ["Holding it in"],
-  hotshot: ["Hot shot"],
   backcap: ["Backwards cap"],
   company: ["Company man"],
   muscle: ["Muscle"],
@@ -163,9 +160,9 @@ const AV = {
   gym: ["Gym"]
 };
 const AV_GROUPS = [
-  ["On the rig", ["point", "shades", "wave", "driller", "chains", "goggles", "worm", "thumbs", "oldhand", "brow", "scratch", "tired", "stern", "sleepy", "sour", "sideeye", "huh", "tough", "wink", "whistle", "laugh"]],
+  ["On the rig", ["shades", "wave", "driller", "chains", "goggles", "worm", "thumbs", "oldhand", "brow", "scratch", "stern", "sleepy", "sour", "sideeye", "huh", "tough", "wink", "whistle", "laugh"]],
   ["Hat off", ["smirk", "fuse", "meh", "holdin"]],
-  ["Trades and hands", ["hotshot", "backcap", "company", "muscle", "coldone", "engineer", "bucket", "operator", "mechanic"]],
+  ["Trades and hands", ["backcap", "company", "muscle", "coldone", "engineer", "bucket", "operator", "mechanic"]],
   ["Off the clock", ["golf", "bbq", "her", "her2", "campfire", "camping", "buddies", "family", "hiking", "gym"]]
 ];
 const avSvg = k => `<img class="avi" src="${AVIMG[k]}" alt="" loading="lazy" decoding="async">`;

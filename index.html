@@ -804,9 +804,8 @@ const IC = {
 };
 
 /* ───────── profile icons (shipped with the app, so they cost nothing to serve) ───────── */
-const AVIMG = {"backcap": "avatars/backcap.webp", "bbq": "avatars/bbq.webp", "brow": "avatars/brow.webp", "bucket": "avatars/bucket.webp", "buddies": "avatars/buddies.webp", "campfire": "avatars/campfire.webp", "camping": "avatars/camping.webp", "chains": "avatars/chains.webp", "coldone": "avatars/coldone.webp", "company": "avatars/company.webp", "driller": "avatars/driller.webp", "engineer": "avatars/engineer.webp", "family": "avatars/family.webp", "fuse": "avatars/fuse.webp", "goggles": "avatars/goggles.webp", "golf": "avatars/golf.webp", "gym": "avatars/gym.webp", "her": "avatars/her.webp", "her2": "avatars/her2.webp", "hiking": "avatars/hiking.webp", "holdin": "avatars/holdin.webp", "hotshot": "avatars/hotshot.webp", "huh": "avatars/huh.webp", "laugh": "avatars/laugh.webp", "mechanic": "avatars/mechanic.webp", "meh": "avatars/meh.webp", "muscle": "avatars/muscle.webp", "oldhand": "avatars/oldhand.webp", "operator": "avatars/operator.webp", "point": "avatars/point.webp", "scratch": "avatars/scratch.webp", "shades": "avatars/shades.webp", "sideeye": "avatars/sideeye.webp", "sleepy": "avatars/sleepy.webp", "smirk": "avatars/smirk.webp", "sour": "avatars/sour.webp", "stern": "avatars/stern.webp", "thumbs": "avatars/thumbs.webp", "tired": "avatars/tired.webp", "tough": "avatars/tough.webp", "wave": "avatars/wave.webp", "whistle": "avatars/whistle.webp", "wink": "avatars/wink.webp", "worm": "avatars/worm.webp"};
+const AVIMG = {"backcap": "avatars/backcap.webp", "bbq": "avatars/bbq.webp", "brow": "avatars/brow.webp", "bucket": "avatars/bucket.webp", "buddies": "avatars/buddies.webp", "campfire": "avatars/campfire.webp", "camping": "avatars/camping.webp", "chains": "avatars/chains.webp", "coldone": "avatars/coldone.webp", "company": "avatars/company.webp", "driller": "avatars/driller.webp", "engineer": "avatars/engineer.webp", "family": "avatars/family.webp", "fuse": "avatars/fuse.webp", "goggles": "avatars/goggles.webp", "golf": "avatars/golf.webp", "gym": "avatars/gym.webp", "her": "avatars/her.webp", "her2": "avatars/her2.webp", "hiking": "avatars/hiking.webp", "holdin": "avatars/holdin.webp", "huh": "avatars/huh.webp", "laugh": "avatars/laugh.webp", "mechanic": "avatars/mechanic.webp", "meh": "avatars/meh.webp", "muscle": "avatars/muscle.webp", "oldhand": "avatars/oldhand.webp", "operator": "avatars/operator.webp", "scratch": "avatars/scratch.webp", "shades": "avatars/shades.webp", "sideeye": "avatars/sideeye.webp", "sleepy": "avatars/sleepy.webp", "smirk": "avatars/smirk.webp", "sour": "avatars/sour.webp", "stern": "avatars/stern.webp", "thumbs": "avatars/thumbs.webp", "tough": "avatars/tough.webp", "wave": "avatars/wave.webp", "whistle": "avatars/whistle.webp", "wink": "avatars/wink.webp", "worm": "avatars/worm.webp"};
 const AV = {
-  point: ["Tool pusher"],
   shades: ["Cool hand"],
   wave: ["Hold up"],
   driller: ["Driller"],
@@ -817,7 +816,6 @@ const AV = {
   oldhand: ["Old hand"],
   brow: ["Skeptic"],
   scratch: ["Head scratcher"],
-  tired: ["Day 13"],
   stern: ["No nonsense"],
   sleepy: ["Night shift"],
   sour: ["Sour"],
@@ -831,7 +829,6 @@ const AV = {
   fuse: ["Short fuse"],
   meh: ["Meh"],
   holdin: ["Holding it in"],
-  hotshot: ["Hot shot"],
   backcap: ["Backwards cap"],
   company: ["Company man"],
   muscle: ["Muscle"],
@@ -852,9 +849,9 @@ const AV = {
   gym: ["Gym"]
 };
 const AV_GROUPS = [
-  ["On the rig", ["point", "shades", "wave", "driller", "chains", "goggles", "worm", "thumbs", "oldhand", "brow", "scratch", "tired", "stern", "sleepy", "sour", "sideeye", "huh", "tough", "wink", "whistle", "laugh"]],
+  ["On the rig", ["shades", "wave", "driller", "chains", "goggles", "worm", "thumbs", "oldhand", "brow", "scratch", "stern", "sleepy", "sour", "sideeye", "huh", "tough", "wink", "whistle", "laugh"]],
   ["Hat off", ["smirk", "fuse", "meh", "holdin"]],
-  ["Trades and hands", ["hotshot", "backcap", "company", "muscle", "coldone", "engineer", "bucket", "operator", "mechanic"]],
+  ["Trades and hands", ["backcap", "company", "muscle", "coldone", "engineer", "bucket", "operator", "mechanic"]],
   ["Off the clock", ["golf", "bbq", "her", "her2", "campfire", "camping", "buddies", "family", "hiking", "gym"]]
 ];
 const avSvg = k => `<img class="avi" src="${AVIMG[k]}" alt="" loading="lazy" decoding="async">`;
