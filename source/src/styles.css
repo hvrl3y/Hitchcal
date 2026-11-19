@@ -432,8 +432,8 @@ button.row:active,.card-btn:active{background:var(--fill)}
 
 /* Insights: compact holiday tiles */
 .hol-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.hol{display:block;text-align:left;background:var(--surface);border-radius:12px;padding:9px 11px;min-width:0;color:var(--label)}
-.hol b{display:block;font-size:calc(14px*var(--ts));font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hol{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:10px;align-items:center;text-align:left;background:var(--surface);border-radius:12px;padding:9px 11px;min-width:0;color:var(--label)}
+.hol b{display:block;font-size:calc(14px*var(--ts));font-weight:600;line-height:1.25}
 .hol small{display:block;font-size:calc(12px*var(--ts));color:var(--label-2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hol.off{box-shadow:inset 3px 0 0 var(--home)}
 .hol.off small{color:var(--home-text)}
@@ -530,4 +530,11 @@ pre.diag{white-space:pre-wrap;word-break:break-word;background:var(--surface);bo
 .chip.miss{background:var(--fill);color:var(--label-2)}
 .cell .hl.fam{background:none;padding:0;font-size:calc(11px*var(--ts));line-height:13px;overflow:visible}
 .sec-title .txt-btn{margin-left:auto}
-
+/* Holiday icons on the Insights tiles */
+.hol-ic{grid-row:span 2;width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:var(--fill);color:var(--label-2)}
+.hol-ic svg{width:18px;height:18px}
+.hol.off .hol-ic{background:var(--hol);color:var(--hol-ink)}
+.hol b,.hol small{min-width:0}
+/* At the largest text size the words get the room, not the icons */
+:root[data-ts="xl"] .hol-ic{display:none}
+:root[data-ts="xl"] .hol{display:block}

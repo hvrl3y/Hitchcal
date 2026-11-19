@@ -457,8 +457,8 @@ button.row:active,.card-btn:active{background:var(--fill)}
 
 /* Insights: compact holiday tiles */
 .hol-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.hol{display:block;text-align:left;background:var(--surface);border-radius:12px;padding:9px 11px;min-width:0;color:var(--label)}
-.hol b{display:block;font-size:calc(14px*var(--ts));font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hol{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:10px;align-items:center;text-align:left;background:var(--surface);border-radius:12px;padding:9px 11px;min-width:0;color:var(--label)}
+.hol b{display:block;font-size:calc(14px*var(--ts));font-weight:600;line-height:1.25}
 .hol small{display:block;font-size:calc(12px*var(--ts));color:var(--label-2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hol.off{box-shadow:inset 3px 0 0 var(--home)}
 .hol.off small{color:var(--home-text)}
@@ -555,7 +555,14 @@ pre.diag{white-space:pre-wrap;word-break:break-word;background:var(--surface);bo
 .chip.miss{background:var(--fill);color:var(--label-2)}
 .cell .hl.fam{background:none;padding:0;font-size:calc(11px*var(--ts));line-height:13px;overflow:visible}
 .sec-title .txt-btn{margin-left:auto}
-
+/* Holiday icons on the Insights tiles */
+.hol-ic{grid-row:span 2;width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:var(--fill);color:var(--label-2)}
+.hol-ic svg{width:18px;height:18px}
+.hol.off .hol-ic{background:var(--hol);color:var(--hol-ink)}
+.hol b,.hol small{min-width:0}
+/* At the largest text size the words get the room, not the icons */
+:root[data-ts="xl"] .hol-ic{display:none}
+:root[data-ts="xl"] .hol{display:block}
 
 /* standalone site: the page handles the phone's safe areas itself */
 :root{--sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px)}
@@ -1052,6 +1059,21 @@ function familyOn(key) {
   if (!famCache.map[y]) { famCache.map[y] = {}; S.family.forEach(f => { const d = famIn(f, y); if (d) (famCache.map[y][toKey(d)] = famCache.map[y][toKey(d)] || []).push(f); }); }
   return famCache.map[y][key] || null;
 }
+/* One line icon per federal holiday, drawn in the app's 24-unit icon style */
+const HOL_IC = {
+  "New Year's Day": svg('<path d="M12 3v3.5M12 17.5V21M3 12h3.5M17.5 12H21M5.6 5.6l2.5 2.5M15.9 15.9l2.5 2.5M5.6 18.4l2.5-2.5M15.9 8.1l2.5-2.5"/><circle cx="12" cy="12" r="1.6"/>'),
+  'MLK Day': svg('<path d="M4 10v4h3l7 4.5v-13L7 10H4z"/><path d="M17.5 9a4 4 0 0 1 0 6M19.8 6.8a7 7 0 0 1 0 10.4"/>'),
+  'Presidents Day': svg('<path d="M3.5 20.5h17M5 17.5h14M6.5 17.5v-7M10 17.5v-7M14 17.5v-7M17.5 17.5v-7M4 10.5h16L12 4.5z"/>'),
+  'Memorial Day': svg('<circle cx="12" cy="7.2" r="3"/><circle cx="16.3" cy="11" r="3"/><circle cx="7.7" cy="11" r="3"/><circle cx="12" cy="11" r="1.4"/><path d="M12 14v7"/>'),
+  'Juneteenth': svg('<path d="M3 17.5h18M7 17.5a5 5 0 0 1 10 0M12 5.5v3M4.6 10.4l2.1 2.1M19.4 10.4l-2.1 2.1M7 21h10"/>'),
+  'Independence Day': svg('<path d="M5 21V3.5"/><path d="M5 4.5c2.6-1.6 4.8 1.6 7.5 0s4.8 1.6 6.5 0v8.5c-1.7 1.6-3.9-1.6-6.5 0S7.6 11.4 5 13"/>'),
+  'Labor Day': svg('<path d="M4.5 16a7.5 7.5 0 0 1 15 0"/><path d="M2.5 16h19v2.5h-19z"/><path d="M10 9.2V6.5h4v2.7"/>'),
+  'Columbus Day': svg('<path d="M3 15.5h18l-2.8 4.5H5.8z"/><path d="M12 15.5V3.5"/><path d="M12 4.5l6.5 9H12M12 6.5l-5 7h5"/>'),
+  'Veterans Day': svg('<path d="M8 3l4 5.5L16 3"/><circle cx="12" cy="14.5" r="5.5"/><path d="M12 11.8l.9 1.8 2 .3-1.45 1.4.35 2-1.8-.95-1.8.95.35-2-1.45-1.4 2-.3z"/>'),
+  'Thanksgiving': svg('<path d="M12 21V7"/><path d="M12 10c-2.2-.8-3.4-2.8-3.4-4.6 2.2.2 3.4 2 3.4 4.6zM12 10c2.2-.8 3.4-2.8 3.4-4.6-2.2.2-3.4 2-3.4 4.6zM12 15c-2.2-.8-3.4-2.8-3.4-4.6 2.2.2 3.4 2 3.4 4.6zM12 15c2.2-.8 3.4-2.8 3.4-4.6-2.2.2-3.4 2-3.4 4.6z"/>'),
+  'Christmas Day': svg('<path d="M12 3l-5.5 6.5h3L5 15h14l-4.5-5.5h3z"/><path d="M12 15v3.5M9 21h6"/>')
+};
+const holIcon = n => HOL_IC[n] || IC.flag;
 const HOL_SHORT = { "New Year's Day": 'New Yr', 'MLK Day': 'MLK', 'Presidents Day': 'Pres.', 'Memorial Day': 'Memor.', 'Juneteenth': 'Juneth.', 'Independence Day': 'July 4', 'Labor Day': 'Labor', 'Columbus Day': 'Columb.', 'Veterans Day': 'Vets', 'Thanksgiving': 'Thanks', 'Christmas Day': 'Xmas' };
 
 /* ───────── pay ───────── */
@@ -1489,7 +1511,7 @@ function renderToday() {
   S.certs.forEach(c => { const st = certState(c); if (st.n <= 60) items.push({ date: parseKey(c.expiry), c: st.n <= 30 ? 'var(--danger)' : 'var(--tint)', ic: IC.shield, title: c.name, sub: st.txt, chip: st.n <= 30 ? st.cls : '', tag: st.n < 0 ? 'Expired' : fmtMD(parseKey(c.expiry)), act: 'certs-open' }); });
   [now.getFullYear(), now.getFullYear() + 1].forEach(y => holidays(y).forEach(hd => {
     const n = daysBetween(today, hd.date);
-    if (n >= 0 && n <= 30) { const off = dayType(toKey(hd.date), sch) === 'off'; items.push({ date: hd.date, c: 'var(--tint)', ic: IC.flag, title: hd.name, sub: `${fmtDay(hd.date)} · ${off ? "You're off" : "You're on hitch"}`, tag: rel(hd.date), k: toKey(hd.date) }); }
+    if (n >= 0 && n <= 30) { const off = dayType(toKey(hd.date), sch) === 'off'; items.push({ date: hd.date, c: 'var(--hol)', ic: holIcon(hd.name), title: hd.name, sub: `${fmtDay(hd.date)} · ${off ? "You're off" : "You're on hitch"}`, tag: rel(hd.date), k: toKey(hd.date) }); }
   }));
   famBetween(today, addDays(today, 30)).forEach(({ f, d, k }) => { const off = dayType(k, sch) === 'off'; items.push({ date: d, emoji: famEmoji(f.kind), title: f.name, sub: `${fmtDay(d)} · ${off ? "You're home" : "You're on hitch"}`, tag: rel(d), k }); });
   Object.keys(S.notes).forEach(k => { const n = daysBetween(today, parseKey(k)); if (n >= 0 && n <= 30) { const nt = S.notes[k]; items.push({ date: parseKey(k), emoji: nt.emoji || '📝', title: nt.text || 'Note', sub: fmtDay(parseKey(k)), tag: rel(parseKey(k)), k }); } });
@@ -1505,7 +1527,7 @@ function renderToday() {
   const hs = holidays(holYear), offN = hs.filter(x => dayType(toKey(x.date), sch) === 'off').length;
   h += `<div class="sec-title">Holidays<span class="seg sm" data-change="hol-year"><button data-act="seg" data-val="${y0}" class="${holYear === y0 ? 'on' : ''}">${y0}</button><button data-act="seg" data-val="${y0 + 1}" class="${holYear === y0 + 1 ? 'on' : ''}">${y0 + 1}</button></span></div>
     <p class="foot" style="margin:-4px 0 10px;padding:0">Home for ${offN} of ${hs.length} federal holidays.</p>
-    <div class="hol-grid">${hs.map(x => { const off = dayType(toKey(x.date), sch) === 'off'; return `<button class="hol${off ? ' off' : ''}" data-act="day" data-k="${toKey(x.date)}"><b>${esc(x.name)}</b><small>${fmtMD(x.date)} · ${off ? 'Off' : 'On hitch'}</small></button>`; }).join('')}</div>`;
+    <div class="hol-grid">${hs.map(x => { const off = dayType(toKey(x.date), sch) === 'off'; return `<button class="hol${off ? ' off' : ''}" data-act="day" data-k="${toKey(x.date)}"><span class="hol-ic">${holIcon(x.name)}</span><b>${esc(x.name === 'Independence Day' ? 'July 4th' : x.name === 'Christmas Day' ? 'Christmas' : x.name)}</b><small>${fmtMD(x.date)} · ${off ? 'Off' : 'On hitch'}</small></button>`; }).join('')}</div>`;
   $('#today-body').innerHTML = h;
 }
 
@@ -1684,7 +1706,7 @@ function openDay(k) {
   }
   const rows = [];
   (familyOn(k) || []).forEach(f => rows.push(`<button class="row" data-act="fam-edit" data-id="${f.id}"><span class="itile e">${famEmoji(f.kind)}</span><span class="t"><b>${esc(f.name)}</b><small>${esc(FAM_KINDS.find(([x]) => x === f.kind)[1])}${f.yearly ? ' · every year' : ''}</small></span>${IC.chev}</button>`));
-  const hol = holidayOn(k); if (hol) rows.push(`<div class="row"><span class="itile" style="--c:var(--hol);color:var(--hol-ink)">${IC.flag}</span><span class="t"><b>${esc(hol)}</b><small>Federal holiday</small></span></div>`);
+  const hol = holidayOn(k); if (hol) rows.push(`<div class="row"><span class="itile" style="--c:var(--hol);color:var(--hol-ink)">${holIcon(hol)}</span><span class="t"><b>${esc(hol)}</b><small>Federal holiday</small></span></div>`);
   S.certs.filter(c => c.expiry === k).forEach(c => rows.push(`<div class="row"><span class="itile" style="--c:var(--danger)">${IC.shield}</span><span class="t"><b>${esc(c.name)}</b><small>Expires this day</small></span></div>`));
   const crew = S.rosters.map(r => { const on = dayType(k, r) === 'on'; return `<div class="row"><span class="avatar sm" style="--av:${r.color};--avi:${inkFor(r.color)}">${avInner(r)}</span><span class="t"><b>${esc(r.name)}</b></span><span class="chip ${on ? 'c-gray' : 'c-home'}">${on ? 'On hitch' : 'Home'}</span></div>`; }).join('');
   openSheet({
